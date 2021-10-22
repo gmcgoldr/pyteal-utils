@@ -1,12 +1,12 @@
 from pyteal import Seq, Txn, compileTeal, Mode, Int, Bytes, For, Log, Itob, ScratchVar
-from util.list import List 
+from util.list import * 
 
 
 demo_ints  = [10, 100, 1000, 100000, 100000000]
 demo_bytes = b"".join([x.to_bytes(8,'big') for x in demo_ints])
 
 def app():
-    l = List(Int(64))
+    l = List(uint64)
 
     i = ScratchVar()
     init = i.store(Int(0))

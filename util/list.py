@@ -7,17 +7,16 @@ from enum import Enum
 # map - Same type only? 
 # Other list types? allow uvarints? dynamic length byte strings?
 
-class UintSize(Enum):
-    """UInt Size  Enum."""
-    uint8  = Int(8)
-    uint16 = Int(16)
-    uint32 = Int(32)
-    uint64 = Int(64)
+
+#Enum
+uint16 = Int(16)
+uint32 = Int(32)
+uint64 = Int(64)
 
 class List:
     _internal = ScratchVar()
 
-    def __init__(self, size: Int = UintSize.uint64):
+    def __init__(self, size: Int):
         # TODO: Make sure its in the enum
         self.size = size 
         self.byte_size = size/Int(8)
