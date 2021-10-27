@@ -11,9 +11,9 @@ data = Bytes(b"deadbeef"+demo_bytes)
 def app():
 
     definition = [
-        (Bytes("account"), 8, 0),
-        (Bytes("balance"), 8, 1),
-        (Bytes("rewards"), 8, 1),
+        ("account", 8, 0),
+        ("balance", 8, 1),
+        ("rewards", 8, 1),
     ]
 
     s = Struct(definition)

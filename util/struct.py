@@ -11,7 +11,7 @@ class Struct():
     def __init__(self, definition):
         pos = 0
         for field in definition:
-           self._conds.append([matches(field[0]), [Int(pos), Int(field[1]), Int(field[2])]])
+           self._conds.append([matches(Bytes(field[0])), [Int(pos), Int(field[1]), Int(field[2])]])
            pos += field[1]
 
     def get_int(self):
