@@ -1,25 +1,30 @@
-from pyteal import Seq, Txn, compileTeal, Mode, Int, Bytes, For, Log, Itob, ScratchVar
-from util.list import * 
+from pyteal import * 
+from util.struct import * 
 
 
-demo_ints  = [10, 100, 1000, 100000, 100000000]
+demo_ints  = [50000, 100]
 demo_bytes = b"".join([x.to_bytes(8,'big') for x in demo_ints])
 
-def app():
-    l = List(uint64)
+data = Bytes(b"deadbeef"+demo_bytes)
 
-    i = ScratchVar()
-    init = i.store(Int(0))
-    cond = i.load() < Int(len(demo_ints))
-    iter = i.store(i.load() + Int(1))
+
+def app():
+
+    definition = [
+        (Bytes("account"), 8, 0),
+        (Bytes("balance"), 8, 1),
+        (Bytes("rewards"), 8, 1),
+    ]
+
+    s = Struct(definition)
+    gi = s.get_int()
+    gb = s.get_bytes()
 
     return Seq(
-        l.set(Bytes(demo_bytes)),
-
-        For(init, cond, iter).Do(
-            Log(Itob(l[i.load()]))
-        ),
-
+        s.store(data),
+        Log(gb(Bytes("account"))),
+        Log(Itob(gi(Bytes("balance")))),
+        Log(Itob(gi(Bytes("rewards")))),
         Int(1)
     )
 
