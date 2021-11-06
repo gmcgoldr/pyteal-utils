@@ -17,7 +17,6 @@ class Struct():
         @Subroutine(TealType.uint64)
         def _getter(field: TealType.bytes):
             return Cond(*[[cond[0](field), i64(self._data.load(), cond[1][0])] for cond in self._conds])
-
         return _getter
 
     def get_bytes(self):
@@ -43,10 +42,3 @@ def matches(fname):
     def _impl(fcheck: TealType.bytes):
         return fcheck == fname
     return _impl
-
-#@Subroutine(TealType.anytype)
-#def get_typed(data: TealType.bytes, position: TealType.uint64, length: TealType.uint64, type: TealType.uint64):
-#    return Cond(
-#        [And(type == Int(0), length == Int(8)), ExtractUint64(data, position)],
-#        [type == Int(1), ]
-#    )

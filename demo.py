@@ -5,13 +5,13 @@ from pyteal import *
 demo_ints  = [50000, 100]
 demo_bytes = b"".join([x.to_bytes(8,'big') for x in demo_ints])
 
-data = Bytes(b"deadbeefdead"+demo_bytes)
+data = Bytes(b"deadbeef"*4+demo_bytes)
 
 
 def app():
 
     definition = [
-        ("account", 12, 0),
+        ("account", 32, 0),
         ("balance", 8, 1),
         ("rewards", 8, 1),
     ]
