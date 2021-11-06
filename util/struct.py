@@ -4,7 +4,6 @@ from typing import Tuple, Dict
 
 
 class Struct():
-
     _data = ScratchVar(TealType.bytes)
     _conds = []
 
