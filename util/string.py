@@ -33,8 +33,11 @@ def atoi(a: TealType.bytes):
 def itoa(i: TealType.uint64):
     return If(
             i == Int(0),
-            Bytes(""),
-            Concat( itoa(i / Int(10)), int_to_ascii(i % Int(10)) )
+            Bytes("0"),
+            Concat( 
+                If(i / Int(10)>Int(0), itoa(i/Int(10)), Bytes("")), 
+                int_to_ascii(i % Int(10)) 
+            )
         )
 
 @Subroutine(TealType.uint64)
