@@ -27,4 +27,4 @@ curl -s localhost:4001/v2/transactions/pending/$txid \
     -H "X-Algo-API-Token: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
     | jq '.logs[]'  | xargs | base64 -d
 
-echo "\n"
+echo ""

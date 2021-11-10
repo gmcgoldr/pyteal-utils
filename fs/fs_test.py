@@ -6,7 +6,7 @@ def test():
 
     test = Seq(
         Pop(fs.write(Int(0), Int(0), Bytes("deadbeef"*16))),
-        Log(fs.read(Int(0), Int(0), Int(8))),
+        Log(fs.read(Int(0), Int(8), Int(32))),
         Int(1)
     )
     return Cond(
