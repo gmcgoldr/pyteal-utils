@@ -2,6 +2,41 @@ from pyteal import *
 
 pageSize = Int(127)
 
+@Subroutine(TealType.bytes)
+def intkey(i: TealType.uint64) -> Expr:
+    return Extract(Itob(i), Int(7), Int(1))
+
+@Subroutine(TealType.bytes)
+def safeSub(b: TealType.bytes, start: TealType.uint64, stop: TealType.uint64)->Expr:
+    return If(b == Bytes("")).Then(
+        Bytes("")
+    ).ElseIf(Len(b)<stop).Then(
+        Substring(b, start, Len(b))
+    ).Else(
+        Substring(b, start, stop)
+    )
+
+@Subroutine(TealType.bytes)
+def safeExtract(b: TealType.bytes, start: TealType.uint64, len: TealType.uint64)->Expr:
+    return If(start+len>Len(b)).Then(
+        Extract(b, start, Len(b)-start)
+    ).Else(
+        Extract(b, start, len)
+    )
+
+@Subroutine(TealType.bytes)
+def safeGet(idx: TealType.uint64, key: TealType.bytes)->Expr:
+
+    mv = App.localGetEx(idx, Int(0), key)
+    return Seq(
+        mv,
+        If(mv.hasValue()).Then(
+            mv.value()
+        ).Else(
+            Bytes("")
+        )
+    )
+
 class FileSystem:
 
 
@@ -23,9 +58,10 @@ class FileSystem:
 
         start = ScratchVar()
         stop  = ScratchVar()
+        work  = ScratchVar()
 
         init = key.store(startKey)
-        cond = key.load() < stopKey
+        cond = key.load() <= stopKey
         incr = key.store(key.load() + Int(1))
 
         return Seq(
@@ -36,7 +72,7 @@ class FileSystem:
                     stop.store(If(key.load() == stopKey, stopOffset, pageSize)),
                     buff.store(Concat(
                         buff.load(),
-                        Substring(App.localGet(idx, key.load()),start.load(), stop.load())
+                        safeSub(safeGet(idx, intkey(key.load())), start.load(), stop.load())
                     ))
                 )
             ),
@@ -64,7 +100,7 @@ class FileSystem:
         written = ScratchVar()
 
         init = key.store(startKey)
-        cond = key.load() < stopKey
+        cond = key.load() <= stopKey
         incr = key.store(key.load() + Int(1))
 
         return Seq(
@@ -73,19 +109,23 @@ class FileSystem:
                 Seq(
                     start.store(If(key.load() == startKey, startOffset, Int(0))),
                     stop.store(If(key.load() == stopKey, stopOffset, pageSize)),
-                    App.localPut(idx, key.load(),
+
+                    App.localPut(idx, intkey(key.load()),
                         If(stop.load() - start.load()<pageSize) # Its a partial write
                         .Then(
                             Concat(
-                                Substring(App.localGet(idx, key.load()), Int(0), start.load()),
-                                Substring(buff, written.load(), written.load() + (stop.load()-start.load())),
-                                Substring(App.localGet(idx, key.load()), stop.load(), pageSize)
+                                safeSub(safeGet(idx, intkey(key.load())), Int(0), start.load()),
+                                safeExtract(buff, written.load(), written.load() + (stop.load()-start.load())),
+                                safeSub(safeGet(idx, intkey(key.load())), stop.load(), pageSize)
                             )
                         )
-                        .Else(Substring(buff, written.load(), pageSize))
+                        .Else(safeExtract(buff, written.load(), pageSize))
                     ),
+
                     written.store(written.load() + (stop.load() - start.load()))
+
                 )
             ),
             written.load()
         )
+
