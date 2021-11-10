@@ -1,6 +1,7 @@
 from ast import *
 from typing import Any
 
+
 class RewriteConsts(NodeTransformer):
     def visit_Constant(self, node: Constant) -> Any:
         t = type(node.value)
@@ -10,15 +11,15 @@ class RewriteConsts(NodeTransformer):
             return self.wrapBytes(node.value)
         else:
             return node
-        
+
     def wrapInt(self, value: int) -> Call:
         return Call(
-            func=Name(id='Int', ctx=Load()),
+            func=Name(id="Int", ctx=Load()),
             args=[Constant(value=value)],
         )
 
     def wrapBytes(self, value) -> Call:
         return Call(
-            func=Name(id='Bytes', ctx=Load()),
+            func=Name(id="Bytes", ctx=Load()),
             args=[Constant(value=value)],
         )

@@ -1,13 +1,14 @@
 from abc import ABC, abstractmethod
 from pyteal import Txn, Return, Int, Expr, OnComplete, Cond, compileTeal, Mode, TealType
 
-class Application(ABC):
 
+class Application(ABC):
     def Method(func):
         def abi(*args, **kwargs):
             print(args, kwargs)
             func(*args, **kwargs)
-        return abi 
+
+        return abi
 
     @abstractmethod
     def create(self):
@@ -35,27 +36,28 @@ class Application(ABC):
 
     def __expr__(self) -> Expr:
         handlers = [
-            [Txn.application_id() == Int(0),                        Return(self.create())],
-            [Txn.on_completion()  == OnComplete.UpdateApplication,  Return(self.update())],
-            [Txn.on_completion()  == OnComplete.DeleteApplication,  Return(self.delete())],
-            [Txn.on_completion()  == OnComplete.OptIn,              Return(self.optIn())],
-            [Txn.on_completion()  == OnComplete.CloseOut,           Return(self.closeOut())],
-            [Txn.on_completion()  == OnComplete.ClearState,         Return(self.clearState())],
+            [Txn.application_id() == Int(0), Return(self.create())],
+            [
+                Txn.on_completion() == OnComplete.UpdateApplication,
+                Return(self.update()),
+            ],
+            [
+                Txn.on_completion() == OnComplete.DeleteApplication,
+                Return(self.delete()),
+            ],
+            [Txn.on_completion() == OnComplete.OptIn, Return(self.optIn())],
+            [Txn.on_completion() == OnComplete.CloseOut, Return(self.closeOut())],
+            [Txn.on_completion() == OnComplete.ClearState, Return(self.clearState())],
         ]
 
         print(self.add.__func__.__name__)
-        #for x in self.__class__:
+        # for x in self.__class__:
         #    print(dir(x))
 
         return Cond(*handlers)
 
 
-
-
-
-
 class MyApp(Application):
-
     def create(self):
         pass
 
