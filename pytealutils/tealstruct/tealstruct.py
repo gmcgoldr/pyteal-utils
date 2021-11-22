@@ -2,21 +2,27 @@ from pyteal import *
 from typing import Tuple, Dict
 from dataclasses import dataclass
 
-
-
 @dataclass
 class TealStruct:
     _data: ScratchVar = ScratchVar(TealType.bytes)
     #_conds: List[Tuple[Subroutine, Subroutine]]
 
     def __post_init__(self):
-        #pos = 0
+        pos = 0
         for k,v in self.__dataclass_fields__.items():
-            print(k)
-            print(v.type)
-            # create getter and setter for each field
-            # use scratch var for start/length
-            
+            if k == "_data":
+                continue
+
+            if hasattr(v.type, '__metadata__'):
+                length = v.type.__metadata__[0]
+
+            if v.type == 'Int':
+                length = 8
+
+            self.__setattr__(k, self._getbytesimpl(pos, length))
+
+            pos += length
+
 
     def init(self) -> Expr:
         @Subroutine(TealType.none)
@@ -24,33 +30,16 @@ class TealStruct:
             return self._data.store(data)
         return _impl
 
-
-    def _getbytesimpl(self, startvar, lengthvar) -> Expr:
-        @Subroutine(TealType.none)
-        def _impl(data):
-            return Extract(self._data.load(), startvar.load(), lengthvar.load())
+    def _getbytesimpl(self, start, length) -> Expr:
+        @Subroutine(TealType.bytes)
+        def _impl():
+            return Extract(self._data.load(), start, length)
         return _impl
 
     def _getintimpl(self, startvar) -> Expr:
-        @Subroutine(TealType.none)
+        @Subroutine(TealType.uint64)
         def _impl():
-            return ExtractUint64(self._data.load(), startvar.load())
-        return _impl
-
-    def _putintimpl(self) -> Expr:
-        @Subroutine(TealType.none)
-        def _impl(data):
-            return Seq([
-                self._data.store(data)
-            ]) 
-        return _impl
-
-    def _putbytesimpl(self) -> Expr:
-        @Subroutine(TealType.none)
-        def _impl(data):
-            return Seq([
-                self._data.store(data)
-            ]) 
+            return ExtractUint64(self._data.load(), startvar)
         return _impl
 
 
