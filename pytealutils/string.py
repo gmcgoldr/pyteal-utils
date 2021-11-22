@@ -4,6 +4,7 @@ from .math import ilog10
 
 ascii_offset = Int(48)  # Magic number to convert between ascii chars and integers
 
+
 @Subroutine(TealType.uint64)
 def ascii_to_int(arg: TealType.uint64):
     return arg - ascii_offset
@@ -24,6 +25,7 @@ def atoi(a: TealType.bytes):
         Int(0),
     )
 
+
 @Subroutine(TealType.bytes)
 def itoa(i: TealType.uint64):
     return If(
@@ -34,6 +36,7 @@ def itoa(i: TealType.uint64):
             int_to_ascii(i % Int(10)),
         ),
     )
+
 
 @Subroutine(TealType.uint64)
 def head(s: TealType.bytes):

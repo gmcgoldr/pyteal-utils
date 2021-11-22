@@ -3,11 +3,16 @@ from typing import Callable
 from inspect import signature
 from functools import wraps
 from Cryptodome.Hash import SHA512
-from pyteal import * 
+from pyteal import *
+
 
 def typestring(a):
-    typedict = { TealType.uint64: "uint64", TealType.bytes: "string", }
+    typedict = {
+        TealType.uint64: "uint64",
+        TealType.bytes: "string",
+    }
     return typedict[a]
+
 
 # Utility function to turn a subroutine callable into its selector
 def selector(f: Callable) -> str:
@@ -25,44 +30,45 @@ def hashy(method: str) -> Bytes:
     chksum.update(method.encode())
     return Bytes(chksum.digest()[:4])
 
+
 class ABIMethod:
     def __init__(self, ret: TealType):
         self.ret = ret
 
     def __call__(self, func):
-        return Subroutine(self.ret)( func )
+        return Subroutine(self.ret)(func)
 
 
 class Application(ABC):
     @abstractmethod
-    def create(self)->Expr:
+    def create(self) -> Expr:
         pass
 
     @abstractmethod
-    def update(self)->Expr:
+    def update(self) -> Expr:
         pass
 
     @abstractmethod
-    def delete(self)->Expr:
+    def delete(self) -> Expr:
         pass
 
     @abstractmethod
-    def optIn(self)->Expr:
+    def optIn(self) -> Expr:
         pass
 
     @abstractmethod
-    def closeOut(self)->Expr:
+    def closeOut(self) -> Expr:
         pass
 
     @abstractmethod
-    def clearState(self)->Expr:
+    def clearState(self) -> Expr:
         pass
 
     def __expr__(self) -> Expr:
-        base    = ["clearState", "closeOut", "create", "delete", "optIn", "update"]
+        base = ["clearState", "closeOut", "create", "delete", "optIn", "update"]
         methods = []
         for m in dir(self):
-            if m not in base and m[0] != "_" :
+            if m not in base and m[0] != "_":
                 methods.append(m)
 
         routes = []
@@ -70,7 +76,12 @@ class Application(ABC):
             func = getattr(self, method)
             # Hardcoded arg passing
             # How do we handle this dynamically?
-            routes.append([Txn.application_args[0] == selector(func), func(Btoi(Txn.application_args[1]), Btoi(Txn.application_args[2]))])
+            routes.append(
+                [
+                    Txn.application_args[0] == selector(func),
+                    func(Btoi(Txn.application_args[1]), Btoi(Txn.application_args[2])),
+                ]
+            )
 
         handlers = [
             *routes,

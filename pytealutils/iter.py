@@ -1,5 +1,6 @@
 from pyteal import ScratchVar, Int, For, Seq, Expr, TealType, Subroutine
 
+
 @Subroutine(TealType.none)
 def range(n: TealType.uint64, method: Expr):
     i = ScratchVar()

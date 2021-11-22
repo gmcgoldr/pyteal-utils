@@ -7,25 +7,29 @@ from dataclasses import dataclass
 
 Address = Annotated[Bytes, 32]
 
-zero_address = lambda: Bytes("00"*32)
+zero_address = lambda: Bytes("00" * 32)
+
 
 @dataclass
 class TestStruct(TealStruct):
     address: Address = field(default_factory=zero_address)
-    balance: Int     = Int(0)
+    balance: Int = Int(0)
+
 
 # Need TealType.* to be generic types?
-#Address = Annotated[List[TealType.uint64], 32]
+# Address = Annotated[List[TealType.uint64], 32]
+
 
 def application():
     t = TestStruct()
     print(t.address)
     print(dir(t.address))
     return Seq(
-        t.init()(Concat(Bytes("FF"*32), Itob(Int(10)))),
+        t.init()(Concat(Bytes("FF" * 32), Itob(Int(10)))),
         Log(t.address),
         Int(1),
     )
+
 
 def application2():
     t = TestStruct(ScratchVar(TealType.bytes))
@@ -40,6 +44,7 @@ def application2():
         Int(1),
     )
 
+
 if __name__ == "__main__":
     application()
-    #print(compileTeal(application(), mode=Mode.Application, version=5))
+    # print(compileTeal(application(), mode=Mode.Application, version=5))
