@@ -1,11 +1,19 @@
 from abc import ABC, abstractmethod
-from enum import Enum
-from typing import Callable, Dict, List, Union
-from inspect import signature
-from functools import wraps
-from Cryptodome.Hash import SHA512
-from algosdk import abi
 from pyteal import *
+
+
+# TODO: should be straight forward
+# generalize uint stuff, use passed in arg to create encoder/decoders
+# byte? get/set byte
+# bool? get/set bit
+
+# TODO: Not sure how to do these yet
+
+# ufixed<N>x<M>: An N-bit unsigned fixed-point decimal number with precision M, where 8 <= N <= 512, N % 8 = 0, and 0 < M <= 160, which denotes a value v as v / (10^M).
+# address: Used to represent a 32-byte Algorand address. This is equivalent to byte[32].
+# <type>[<N>]: A fixed-length array of length N, where N >= 0. type can be any other type.
+# <type>[]: A variable-length array. type can be any other type.
+# (T1,T2,...,TN): A tuple of the types T1, T2, …, TN, N >= 0.
 
 
 @Subroutine(TealType.bytes)
@@ -87,5 +95,3 @@ class String(ABIType):
     def encode(value: bytes) -> Expr:
         return prepend_length(value)
 
-
-__package__ = "abi"
