@@ -126,6 +126,7 @@ class Application(ABC):
         base = [
             "get_methods",
             "get_interface",
+            "handler",
             "clearState",
             "closeOut",
             "create",
@@ -149,7 +150,8 @@ class Application(ABC):
 
         return abi.Interface(self.__class__.__name__, abiMethods)
 
-    def __teal__(self) -> Expr:
+
+    def handler(self) -> Expr:
         methods = self.get_methods()
 
         routes = [

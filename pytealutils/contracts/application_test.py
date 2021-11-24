@@ -32,6 +32,6 @@ class Calculator(ApproveAll):
 
 app = Calculator()
 print(json.dumps(app.get_interface().dictify(), indent=2))
-compiled = compileTeal(app.__teal__(), mode=Mode.Application, version=5)
+compiled = compileTeal(app.handler(), mode=Mode.Application, version=5)
 with open("approval.teal", "w") as f:
     f.write(compiled)
