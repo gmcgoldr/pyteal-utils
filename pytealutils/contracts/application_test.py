@@ -1,47 +1,26 @@
 from pyteal import *
-from application import Application, ABIMethod
+from application import ApproveAll, Application, ABIMethod
+
+from sys import path
+from os.path import dirname, abspath
+
+path.append(dirname(abspath(__file__)) + "/..")
+import abi
 
 
-class MyApp(Application):
+class MyApp(ApproveAll):
     @staticmethod
-    @Subroutine(TealType.uint64)
-    def create() -> Expr:
-        return Approve()
-
-    @staticmethod
-    @Subroutine(TealType.uint64)
-    def update() -> Expr:
-        return Approve()
-
-    @staticmethod
-    @Subroutine(TealType.uint64)
-    def delete() -> Expr:
-        return Approve()
-
-    @staticmethod
-    @Subroutine(TealType.uint64)
-    def optIn() -> Expr:
-        return Approve()
-
-    @staticmethod
-    @Subroutine(TealType.uint64)
-    def closeOut() -> Expr:
-        return Approve()
-
-    @staticmethod
-    @Subroutine(TealType.uint64)
-    def clearState() -> Expr:
-        return Approve()
-
-    @staticmethod
-    @ABIMethod(TealType.uint64)
-    def add(a: TealType.uint64, b: TealType.uint64) -> Expr:
+    @ABIMethod(abi.Uint32)
+    def add(a: abi.Uint32, b: abi.Uint32) -> Expr:
         return a + b
 
     @staticmethod
-    @ABIMethod(TealType.uint64)
-    def subtract(a: TealType.uint64, b: TealType.uint64) -> Expr:
+    @ABIMethod(abi.Uint32)
+    def subtract(a: abi.Uint32, b: abi.Uint32) -> Expr:
         return a - b
 
 
-print(compileTeal(MyApp().__expr__(), mode=Mode.Application, version=5))
+app = MyApp()
+# print(app.get_interface())
+compiled = compileTeal(MyApp().__teal__(), mode=Mode.Application, version=5)
+print(compiled)

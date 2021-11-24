@@ -1,9 +1,18 @@
 from abc import ABC, abstractmethod
-from typing import Callable
+from enum import Enum
+from types import FunctionType
+from typing import Callable, Dict, List, OrderedDict, Union
 from inspect import signature
-from functools import wraps
+from functools import update_wrapper, wraps
 from Cryptodome.Hash import SHA512
+from algosdk import abi
 from pyteal import *
+
+from sys import path
+from os.path import dirname, abspath
+
+path.append(dirname(abspath(__file__)) + "/..")
+import abi as tealabi
 
 
 def typestring(a):
@@ -31,12 +40,54 @@ def hashy(method: str) -> Bytes:
     return Bytes(chksum.digest()[:4])
 
 
+return_prefix = Bytes("base16", "0x151f7c75")  # Literally hash('return')[:4]
+
+
+@Subroutine(TealType.none)
+def ABIReturn(b: TealType.bytes) -> Expr:
+    return Log(Concat(return_prefix, b))
+
+
 class ABIMethod:
-    def __init__(self, ret: TealType):
+    def __init__(self, ret: tealabi.ABIType):
         self.ret = ret
 
     def __call__(self, func):
-        return Subroutine(self.ret)(func)
+
+        sig = signature(func)
+
+        # Get the types specified in the method
+        abi_codec = [v.annotation for v in sig.parameters.values()]
+
+        # Replace with teal native types
+        new_params = OrderedDict(
+            [
+                (k, v.replace(annotation=v.annotation.stack_type))
+                for k, v in sig.parameters.items()
+            ]
+        )
+        func.__signature__ = sig.replace(parameters=new_params.values())
+
+        # Wrap with encode/decode
+        @wraps(func)
+        @Subroutine(TealType.uint64)
+        def wrapper() -> Expr:
+            # Invoke f with decoded arguments
+            return Seq(
+                ABIReturn(
+                self.ret.encode(
+                    func(
+                        *[
+                            abi_codec[idx].decode(Txn.application_args[idx])
+                            for idx in range(len(abi_codec))
+                        ]
+                    )
+                )
+            ),
+            Int(1)
+        )
+
+        return wrapper
 
 
 class Application(ABC):
@@ -64,24 +115,38 @@ class Application(ABC):
     def clearState(self) -> Expr:
         pass
 
-    def __expr__(self) -> Expr:
-        base = ["clearState", "closeOut", "create", "delete", "optIn", "update"]
+    def get_methods(self) -> List[str]:
+        base = [
+            "get_methods",
+            "clearState",
+            "closeOut",
+            "create",
+            "delete",
+            "optIn",
+            "update",
+        ]
         methods = []
         for m in dir(self):
             if m not in base and m[0] != "_":
                 methods.append(m)
 
-        routes = []
-        for method in methods:
-            func = getattr(self, method)
-            # Hardcoded arg passing
-            # How do we handle this dynamically?
-            routes.append(
-                [
-                    Txn.application_args[0] == selector(func),
-                    func(Btoi(Txn.application_args[1]), Btoi(Txn.application_args[2])),
-                ]
-            )
+        return methods
+
+    # def get_interface(self)->abi.Interface:
+    #    abiMethods = []
+    #    methods = self.get_methods()
+    #    for method in methods:
+    #        func = signature(getattr(self, method))
+
+    #    return abi.Interface(self.__class__.__name__, abiMethods)
+
+    def __teal__(self) -> Expr:
+        methods = self.get_methods()
+
+        routes = [
+            [Txn.application_args[0] == selector(f), f()]
+            for f in map(lambda m: getattr(self, m), methods)
+        ]
 
         handlers = [
             *routes,
@@ -99,4 +164,38 @@ class Application(ABC):
             [Txn.on_completion() == OnComplete.ClearState, self.clearState()],
         ]
 
+        print(handlers)
+
         return Cond(*handlers)
+
+
+class ApproveAll(Application):
+    @staticmethod
+    @Subroutine(TealType.uint64)
+    def create() -> Expr:
+        return Approve()
+
+    @staticmethod
+    @Subroutine(TealType.uint64)
+    def update() -> Expr:
+        return Approve()
+
+    @staticmethod
+    @Subroutine(TealType.uint64)
+    def delete() -> Expr:
+        return Approve()
+
+    @staticmethod
+    @Subroutine(TealType.uint64)
+    def optIn() -> Expr:
+        return Approve()
+
+    @staticmethod
+    @Subroutine(TealType.uint64)
+    def closeOut() -> Expr:
+        return Approve()
+
+    @staticmethod
+    @Subroutine(TealType.uint64)
+    def clearState() -> Expr:
+        return Approve()
