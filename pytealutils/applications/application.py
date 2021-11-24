@@ -28,56 +28,51 @@ def ABIReturn(b: TealType.bytes) -> Expr:
     return Log(Concat(Bytes("base16", "0x151f7c75"), b))
 
 
-class ABIMethod:
-    def __init__(self, ret: tealabi.ABIType):
-        self.ret = ret
+def ABIMethod(func):
+    sig = signature(func)
+    returns = sig.return_annotation
 
-    def __call__(self, func):
-        sig = signature(func)
+    args = [v.annotation.__name__.lower() for v in sig.parameters.values()]
+    method = "{}({}){}".format(func.__name__, ",".join(args), returns.__name__.lower())
+    selector = hashy(method)
 
-        args = [v.annotation.__name__.lower() for v in sig.parameters.values()]
-        method = "{}({}){}".format(
-            func.__name__, ",".join(args), self.ret.__name__.lower()
-        )
-        selector = hashy(method)
+    setattr(func, "abi_signature", method)
+    setattr(func, "abi_selector", selector)
+    setattr(func, "abi_args", [abi.Argument(arg) for arg in args])
+    setattr(func, "abi_returns", abi.Returns(returns.__name__.lower()))
 
-        setattr(func, "signature", method)
-        setattr(func, "selector", selector)
-        setattr(func, "args", [abi.Argument(arg) for arg in args])
-        setattr(func, "returns", abi.Returns(self.ret.__name__.lower()))
+    # Get the types specified in the method
+    abi_codec = [v.annotation for v in sig.parameters.values()]
 
-        # Get the types specified in the method
-        abi_codec = [v.annotation for v in sig.parameters.values()]
+    # Replace signature with teal native types
+    new_params = OrderedDict(
+        [
+            (k, v.replace(annotation=v.annotation.stack_type))
+            for k, v in sig.parameters.items()
+        ]
+    )
+    func.__signature__ = sig.replace(parameters=new_params.values())
 
-        # Replace signature with teal native types
-        new_params = OrderedDict(
-            [
-                (k, v.replace(annotation=v.annotation.stack_type))
-                for k, v in sig.parameters.items()
-            ]
-        )
-        func.__signature__ = sig.replace(parameters=new_params.values())
-
-        # Wrap with encode/decode
-        @wraps(func)
-        @Subroutine(TealType.uint64)
-        def wrapper() -> Expr:
-            # Invoke f with decoded arguments
-            return Seq(
-                ABIReturn(
-                    self.ret.encode(
-                        func(
-                            *[
-                                abi_codec[idx].decode(Txn.application_args[idx + 1])
-                                for idx in range(len(abi_codec))
-                            ]
-                        )
+    # Wrap with encode/decode
+    @wraps(func)
+    @Subroutine(TealType.uint64)
+    def wrapper() -> Expr:
+        # Invoke f with decoded arguments
+        return Seq(
+            ABIReturn(
+                returns.encode(
+                    func(
+                        *[
+                            abi_codec[idx].decode(Txn.application_args[idx + 1])
+                            for idx in range(len(abi_codec))
+                        ]
                     )
-                ),
-                Int(1),
-            )
+                )
+            ),
+            Int(1),
+        )
 
-        return wrapper
+    return wrapper
 
 
 class Application(ABC):
@@ -129,9 +124,7 @@ class Application(ABC):
         methods = self.get_methods()
         for method in methods:
             f = getattr(self, method)
-            abiMethods.append(
-                abi.Method(f.__name__, getattr(f, "args"), getattr(f, "returns"))
-            )
+            abiMethods.append(abi.Method(f.__name__, f.abi_args, f.abi_returns))
 
         return abi.Interface(self.__class__.__name__, abiMethods)
 
@@ -139,7 +132,7 @@ class Application(ABC):
         methods = self.get_methods()
 
         routes = [
-            [Txn.application_args[0] == f.selector, f()]
+            [Txn.application_args[0] == f.abi_selector, f()]
             for f in map(lambda m: getattr(self, m), methods)
         ]
 
