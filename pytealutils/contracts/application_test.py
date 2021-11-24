@@ -1,10 +1,11 @@
 from pyteal import *
-from application import ApproveAll, Application, ABIMethod
+from application import ABIMethod
+from approve_all import ApproveAll
 import json
+
 
 from sys import path
 from os.path import dirname, abspath
-
 path.append(dirname(abspath(__file__)) + "/..")
 import abi
 
