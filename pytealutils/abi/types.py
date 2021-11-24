@@ -51,7 +51,7 @@ class Uint32(ABIType):
     @staticmethod
     @Subroutine(TealType.bytes)
     def encode(value: Int)->Expr:
-        return Itob(value)
+        return Extract(Itob(value), Int(4), Int(4))
 
 
 class Uint16(ABIType):
@@ -64,7 +64,7 @@ class Uint16(ABIType):
     @staticmethod
     @Subroutine(TealType.bytes)
     def encode(value: Int)->Expr:
-        return Itob(value)
+        return Extract(Itob(value), Int(6), Int(2))
 
 class String(ABIType):
     stack_type = TealType.bytes

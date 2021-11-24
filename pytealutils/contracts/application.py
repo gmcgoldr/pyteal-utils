@@ -53,19 +53,22 @@ class ABIMethod:
         self.ret = ret
 
     def __call__(self, func):
-
         sig = signature(func)
+
+        args = [v.annotation.__name__.lower() for v in sig.parameters.values()]
+        method = "{}({}){}".format(func.__name__, ",".join(args), self.ret.__name__.lower())
+        selector = hashy(method)
 
         # Get the types specified in the method
         abi_codec = [v.annotation for v in sig.parameters.values()]
 
-        # Replace with teal native types
-        new_params = OrderedDict(
-            [
-                (k, v.replace(annotation=v.annotation.stack_type))
-                for k, v in sig.parameters.items()
-            ]
-        )
+        # Replace signature with teal native types
+        new_params = OrderedDict([
+            (k, v.replace(annotation=v.annotation.stack_type))
+            for k, v in sig.parameters.items()
+        ])
+        setattr(func, "signature", method)
+        setattr(func, "selector", selector)
         func.__signature__ = sig.replace(parameters=new_params.values())
 
         # Wrap with encode/decode
@@ -78,7 +81,7 @@ class ABIMethod:
                 self.ret.encode(
                     func(
                         *[
-                            abi_codec[idx].decode(Txn.application_args[idx])
+                            abi_codec[idx].decode(Txn.application_args[idx+1])
                             for idx in range(len(abi_codec))
                         ]
                     )
@@ -144,12 +147,11 @@ class Application(ABC):
         methods = self.get_methods()
 
         routes = [
-            [Txn.application_args[0] == selector(f), f()]
+            [Txn.application_args[0] == f.selector, f()]
             for f in map(lambda m: getattr(self, m), methods)
         ]
 
         handlers = [
-            *routes,
             [Txn.application_id() == Int(0), self.create()],
             [
                 Txn.on_completion() == OnComplete.UpdateApplication,
@@ -159,12 +161,11 @@ class Application(ABC):
                 Txn.on_completion() == OnComplete.DeleteApplication,
                 self.delete(),
             ],
+            *routes,
             [Txn.on_completion() == OnComplete.OptIn, self.optIn()],
             [Txn.on_completion() == OnComplete.CloseOut, self.closeOut()],
             [Txn.on_completion() == OnComplete.ClearState, self.clearState()],
         ]
-
-        print(handlers)
 
         return Cond(*handlers)
 

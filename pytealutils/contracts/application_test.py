@@ -23,4 +23,5 @@ class MyApp(ApproveAll):
 app = MyApp()
 # print(app.get_interface())
 compiled = compileTeal(MyApp().__teal__(), mode=Mode.Application, version=5)
-print(compiled)
+with open("approval.teal", "w") as f:
+    f.write(compiled)
