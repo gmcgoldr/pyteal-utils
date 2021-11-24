@@ -31,7 +31,9 @@ class Calculator(ApproveAll):
         return a * b
 
 app = Calculator()
-print(json.dumps(app.get_interface().dictify(), indent=2))
-compiled = compileTeal(app.handler(), mode=Mode.Application, version=5)
+
+with open("interface.json", "w") as f:
+    f.write(json.dumps(app.get_interface().dictify()))
+
 with open("approval.teal", "w") as f:
-    f.write(compiled)
+    f.write(compileTeal(app.handler(), mode=Mode.Application, version=5))
