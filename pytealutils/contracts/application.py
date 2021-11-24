@@ -15,37 +15,17 @@ path.append(dirname(abspath(__file__)) + "/..")
 import abi as tealabi
 
 
-def typestring(a):
-    typedict = {
-        TealType.uint64: "uint64",
-        TealType.bytes: "string",
-    }
-    return typedict[a]
-
-
-# Utility function to turn a subroutine callable into its selector
-def selector(f: Callable) -> str:
-    sig = signature(f)
-    args = [typestring(p[1].annotation) for p in sig.parameters.items()]
-    ret = typestring(f.__closure__[0].cell_contents.returnType)
-    method = "{}({}){}".format(f.__name__, ",".join(args), ret)
-    return hashy(method)
-
-
-# Utility function to take the string version of a method signature and
-# return the 4 byte selector
+# Utility function to take the string version of a
+# method signature and return the 4 byte selector
 def hashy(method: str) -> Bytes:
     chksum = SHA512.new(truncate="256")
     chksum.update(method.encode())
     return Bytes(chksum.digest()[:4])
 
 
-return_prefix = Bytes("base16", "0x151f7c75")  # Literally hash('return')[:4]
-
-
 @Subroutine(TealType.none)
 def ABIReturn(b: TealType.bytes) -> Expr:
-    return Log(Concat(return_prefix, b))
+    return Log(Concat(Bytes("base16", "0x151f7c75"), b))
 
 
 class ABIMethod:
@@ -56,7 +36,9 @@ class ABIMethod:
         sig = signature(func)
 
         args = [v.annotation.__name__.lower() for v in sig.parameters.values()]
-        method = "{}({}){}".format(func.__name__, ",".join(args), self.ret.__name__.lower())
+        method = "{}({}){}".format(
+            func.__name__, ",".join(args), self.ret.__name__.lower()
+        )
         selector = hashy(method)
 
         setattr(func, "signature", method)
@@ -68,12 +50,13 @@ class ABIMethod:
         abi_codec = [v.annotation for v in sig.parameters.values()]
 
         # Replace signature with teal native types
-        new_params = OrderedDict([
-            (k, v.replace(annotation=v.annotation.stack_type))
-            for k, v in sig.parameters.items()
-        ])
+        new_params = OrderedDict(
+            [
+                (k, v.replace(annotation=v.annotation.stack_type))
+                for k, v in sig.parameters.items()
+            ]
+        )
         func.__signature__ = sig.replace(parameters=new_params.values())
-
 
         # Wrap with encode/decode
         @wraps(func)
@@ -82,17 +65,17 @@ class ABIMethod:
             # Invoke f with decoded arguments
             return Seq(
                 ABIReturn(
-                self.ret.encode(
-                    func(
-                        *[
-                            abi_codec[idx].decode(Txn.application_args[idx+1])
-                            for idx in range(len(abi_codec))
-                        ]
+                    self.ret.encode(
+                        func(
+                            *[
+                                abi_codec[idx].decode(Txn.application_args[idx + 1])
+                                for idx in range(len(abi_codec))
+                            ]
+                        )
                     )
-                )
-            ),
-            Int(1)
-        )
+                ),
+                Int(1),
+            )
 
         return wrapper
 
@@ -141,15 +124,16 @@ class Application(ABC):
 
         return methods
 
-    def get_interface(self)->abi.Interface:
+    def get_interface(self) -> abi.Interface:
         abiMethods = []
         methods = self.get_methods()
         for method in methods:
             f = getattr(self, method)
-            abiMethods.append(abi.Method(f.__name__, getattr(f, "args"), getattr(f, "returns")))
+            abiMethods.append(
+                abi.Method(f.__name__, getattr(f, "args"), getattr(f, "returns"))
+            )
 
         return abi.Interface(self.__class__.__name__, abiMethods)
-
 
     def handler(self) -> Expr:
         methods = self.get_methods()

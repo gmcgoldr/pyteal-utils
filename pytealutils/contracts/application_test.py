@@ -30,6 +30,7 @@ class Calculator(ApproveAll):
     def mul(a: abi.Uint32, b: abi.Uint32) -> Expr:
         return a * b
 
+
 app = Calculator()
 
 with open("interface.json", "w") as f:
