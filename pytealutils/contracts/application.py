@@ -59,6 +59,11 @@ class ABIMethod:
         method = "{}({}){}".format(func.__name__, ",".join(args), self.ret.__name__.lower())
         selector = hashy(method)
 
+        setattr(func, "signature", method)
+        setattr(func, "selector", selector)
+        setattr(func, "args", [abi.Argument(arg) for arg in args])
+        setattr(func, "returns", abi.Returns(self.ret.__name__.lower()))
+
         # Get the types specified in the method
         abi_codec = [v.annotation for v in sig.parameters.values()]
 
@@ -67,9 +72,8 @@ class ABIMethod:
             (k, v.replace(annotation=v.annotation.stack_type))
             for k, v in sig.parameters.items()
         ])
-        setattr(func, "signature", method)
-        setattr(func, "selector", selector)
         func.__signature__ = sig.replace(parameters=new_params.values())
+
 
         # Wrap with encode/decode
         @wraps(func)
@@ -121,6 +125,7 @@ class Application(ABC):
     def get_methods(self) -> List[str]:
         base = [
             "get_methods",
+            "get_interface",
             "clearState",
             "closeOut",
             "create",
@@ -135,13 +140,14 @@ class Application(ABC):
 
         return methods
 
-    # def get_interface(self)->abi.Interface:
-    #    abiMethods = []
-    #    methods = self.get_methods()
-    #    for method in methods:
-    #        func = signature(getattr(self, method))
+    def get_interface(self)->abi.Interface:
+        abiMethods = []
+        methods = self.get_methods()
+        for method in methods:
+            f = getattr(self, method)
+            abiMethods.append(abi.Method(f.__name__, getattr(f, "args"), getattr(f, "returns")))
 
-    #    return abi.Interface(self.__class__.__name__, abiMethods)
+        return abi.Interface(self.__class__.__name__, abiMethods)
 
     def __teal__(self) -> Expr:
         methods = self.get_methods()
