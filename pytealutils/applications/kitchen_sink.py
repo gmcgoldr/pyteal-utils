@@ -51,14 +51,15 @@ class KitchenSink(ApproveAll):
         return a * b
 
 
-app = KitchenSink()
+if __name__ == "__main__":
+    app = KitchenSink()
 
-with open("interface.json", "w") as f:
-    f.write(json.dumps(app.get_interface().dictify()))
+    with open("interface.json", "w") as f:
+        f.write(json.dumps(app.get_interface().dictify()))
 
-with open("approval.teal", "w") as f:
-    f.write(
-        compileTeal(
-            app.handler(), mode=Mode.Application, version=5, assembleConstants=True
+    with open("approval.teal", "w") as f:
+        f.write(
+            compileTeal(
+                app.handler(), mode=Mode.Application, version=5, assembleConstants=True
+            )
         )
-    )

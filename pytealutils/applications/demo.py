@@ -8,17 +8,21 @@ from algosdk.mnemonic import *
 from client import ContractClient
 from kitchen_sink import KitchenSink
 
-mnemonic = "hobby other dilemma add wool nurse insane cinnamon doctor swarm fan same usage sock mirror clever mention situate reason subject curtain tired flat able hunt"
+mnemonic = "movie resource mimic casino kid alpha grass library addict olympic bind when negative slam doll spawn crazy firm material frame reject humble join above crumble"
 sk = to_private_key(mnemonic)
 addr = to_public_key(mnemonic)
 
 app = KitchenSink()
 
-cc = ContractClient(app.get_contract(139), AccountTransactionSigner(sk))
+cc = ContractClient(app, AccountTransactionSigner(sk))
+
+# Deploy and set new app id on contract client
+app_id = cc.deploy()
+print("Created {}".format(app_id))
 
 # Single call, increase budget with "pad" method
 result = cc.call(cc.reverse, ["desrever yllufsseccus"], budget=2)
-print(result.abi_results[0].return_value)
+print("Result of single call: {}".format(result.abi_results[0].return_value))
 
 # Compose from set of
 comp = AtomicTransactionComposer()
@@ -27,4 +31,4 @@ cc.compose(comp, cc.sub, [3, 1])
 cc.compose(comp, cc.div, [4, 2])
 cc.compose(comp, cc.mul, [3, 2])
 result = comp.execute(cc.client, 2)
-print([r.return_value for r in result.abi_results])
+print("Result of group: {}".format([r.return_value for r in result.abi_results]))

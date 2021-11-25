@@ -6,6 +6,7 @@ from inspect import signature
 from functools import update_wrapper, wraps
 from Cryptodome.Hash import SHA512
 from algosdk import abi
+from algosdk.future.transaction import StateSchema
 from pyteal import *
 
 from sys import path
@@ -106,6 +107,10 @@ class Application(ABC):
             "get_interface",
             "get_contract",
             "handler",
+            "approval_source",
+            "clear_source",
+            "global_schema",
+            "local_schema",
             "clearState",
             "closeOut",
             "create",
@@ -164,3 +169,20 @@ class Application(ABC):
         ]
 
         return Cond(*handlers)
+
+    def approval_source(self) -> str:
+        return compileTeal(
+            self.handler(), mode=Mode.Application, version=5, assembleConstants=True
+        )
+
+    def clear_source(self) -> str:
+        return """#pragma version 5
+int 1
+return
+"""
+
+    def global_schema(self) -> StateSchema:
+        return StateSchema(0, 0)
+
+    def local_schema(self) -> StateSchema:
+        return StateSchema(0, 0)
