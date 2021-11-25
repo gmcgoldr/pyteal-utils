@@ -127,7 +127,7 @@ class Application(ABC):
             f = getattr(self, method)
             abiMethods.append(abi.Method(f.__name__, f.abi_args, f.abi_returns))
 
-        #TODO: hacked this in for now, to provide extended extended budget
+        # TODO: hacked this in for now, to provide extended extended budget
         abiMethods.append(abi.Method("pad", [], abi.Returns("void")))
 
         return abi.Interface(self.__class__.__name__, abiMethods)
@@ -135,7 +135,6 @@ class Application(ABC):
     def get_contract(self, app_id: int) -> abi.Contract:
         interface = self.get_interface()
         return abi.Contract(interface.name, app_id, interface.methods)
-    
 
     def handler(self) -> Expr:
         methods = self.get_methods()
