@@ -8,6 +8,7 @@ from algosdk.account import address_from_private_key
 from pyteal import *
 from algosdk.v2client import algod
 from algosdk.future.transaction import (
+    ApplicationDeleteTxn,
     ApplicationUpdateTxn,
     ApplicationCreateTxn,
     StateSchema,
@@ -70,7 +71,7 @@ def ABIMethod(func):
     @wraps(func)
     @Subroutine(TealType.uint64)
     def wrapper() -> Expr:
-        # Invoke f with decoded arguments
+        # Wrap func with encoder and decoders
         return Seq(
             ABIReturn(
                 returns.encode(
@@ -125,8 +126,8 @@ class Application(ABC):
             for f in map(lambda m: getattr(self, m), methods)
         ]
 
-        pad_selector = hashy("pad()void")
-        routes.append([Txn.application_args[0] == pad_selector, Int(1)])
+        # Hack to add budget padding
+        routes.append([Txn.application_args[0] == hashy("pad()void"), Int(1)])
 
         handlers = [
             [Txn.application_id() == Int(0), self.create()],
@@ -189,7 +190,25 @@ class Application(ABC):
         ctx.execute(client, 2)
         return self.get_contract(app_id)
 
-    def deploy_app(
+    def delete_app(
+        self, app_id: int, client: algod.AlgodClient, signer: AccountTransactionSigner
+    ):
+        sp = client.suggested_params()
+
+        ctx = AtomicTransactionComposer()
+        ctx.add_transaction(
+            TransactionWithSigner(
+                ApplicationDeleteTxn(
+                    address_from_private_key(signer.private_key),
+                    sp,
+                    app_id,
+                ),
+                signer,
+            )
+        )
+        return ctx.execute(client, 2)
+
+    def create_app(
         self, client: algod.AlgodClient, signer: AccountTransactionSigner
     ) -> abi.Contract:
         sp = client.suggested_params()

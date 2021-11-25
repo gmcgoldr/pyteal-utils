@@ -17,16 +17,13 @@ client = AlgodClient("a" * 64, "http://localhost:4002")
 
 app = KitchenSink()
 
-app_id = 306
-# Deploy
-# contract = app.deploy_app(client, signer)
-# app_id=contract.app_id
-# print("Created {}".format(contract.app_id))
+# Create App
+contract = app.create_app(client, signer)
+print("Created {}".format(contract.app_id))
 
-# update
-contract = app.update_app(app_id, client, signer)
+# Update App
+contract = app.update_app(contract.app_id, client, signer)
 print("Updated {}".format(contract.app_id))
-
 
 # Create client to make calls with
 cc = ContractClient(client, contract, signer)
@@ -35,7 +32,7 @@ cc = ContractClient(client, contract, signer)
 result = cc.call(cc.reverse, ["desrever yllufsseccus"])
 print("Result of single call: {}".format(result.abi_results[0].return_value))
 
-# Compose from set of
+# Compose from set of app calls
 comp = AtomicTransactionComposer()
 cc.compose(comp, cc.add, [1, 1])
 cc.compose(comp, cc.sub, [3, 1])
@@ -43,3 +40,7 @@ cc.compose(comp, cc.div, [4, 2])
 cc.compose(comp, cc.mul, [3, 2])
 result = comp.execute(cc.client, 2)
 print("Result of group: {}".format([r.return_value for r in result.abi_results]))
+
+# Delete App
+app.delete_app(contract.app_id, client, signer)
+print("Deleted {}".format(contract.app_id))
