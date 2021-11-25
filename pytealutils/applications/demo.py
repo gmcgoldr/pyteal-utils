@@ -14,10 +14,7 @@ addr = to_public_key(mnemonic)
 
 app = KitchenSink()
 
-interface = app.get_interface()
-contract = abi.Contract(interface.name, 139, interface.methods)
-
-cc = ContractClient(contract, AccountTransactionSigner(sk))
+cc = ContractClient(app.get_contract(139), AccountTransactionSigner(sk))
 
 # Single call, increase budget with "pad" method
 result = cc.call(cc.reverse, ["desrever yllufsseccus"], budget=2)
