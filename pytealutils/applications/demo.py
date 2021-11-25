@@ -3,22 +3,27 @@ from algosdk.atomic_transaction_composer import (
     AtomicTransactionComposer,
     AccountTransactionSigner,
 )
+from algosdk.v2client.algod import AlgodClient
 from algosdk.mnemonic import *
 
 from client import ContractClient
 from kitchen_sink import KitchenSink
 
 mnemonic = "movie resource mimic casino kid alpha grass library addict olympic bind when negative slam doll spawn crazy firm material frame reject humble join above crumble"
-sk = to_private_key(mnemonic)
-addr = to_public_key(mnemonic)
+sk      = to_private_key(mnemonic)
+signer  = AccountTransactionSigner(sk)
+
+client = AlgodClient("a" * 64, "http://localhost:4002")
 
 app = KitchenSink()
 
-cc = ContractClient(app, AccountTransactionSigner(sk))
+# Deploy
+contract = app.deploy(client, signer)
 
-# Deploy and set new app id on contract client
-app_id = cc.deploy()
-print("Created {}".format(app_id))
+print("Created {}".format(contract.app_id))
+
+# Create client to make calls with
+cc = ContractClient(client, contract, signer)
 
 # Single call, increase budget with "pad" method
 result = cc.call(cc.reverse, ["desrever yllufsseccus"], budget=2)

@@ -1,13 +1,15 @@
 from abc import ABC, abstractmethod
-from enum import Enum
-from types import FunctionType
-from typing import Callable, Dict, List, OrderedDict, Union
+from typing import  List, OrderedDict
 from inspect import signature
-from functools import update_wrapper, wraps
+from functools import wraps
 from Cryptodome.Hash import SHA512
 from algosdk import abi
-from algosdk.future.transaction import StateSchema
+from algosdk.account import address_from_private_key
 from pyteal import *
+from algosdk.v2client import algod 
+from algosdk.future.transaction import ApplicationCreateTxn, StateSchema, wait_for_confirmation, OnComplete as oc
+from algosdk.atomic_transaction_composer import AccountTransactionSigner, AtomicTransactionComposer, TransactionWithSigner
+import base64
 
 from sys import path
 from os.path import dirname, abspath
@@ -111,6 +113,7 @@ class Application(ABC):
             "clear_source",
             "global_schema",
             "local_schema",
+            "deploy",
             "clearState",
             "closeOut",
             "create",
@@ -125,21 +128,6 @@ class Application(ABC):
 
         return methods
 
-    def get_interface(self) -> abi.Interface:
-        abiMethods = []
-        methods = self.get_methods()
-        for method in methods:
-            f = getattr(self, method)
-            abiMethods.append(abi.Method(f.__name__, f.abi_args, f.abi_returns))
-
-        # TODO: hacked this in for now, to provide extended extended budget
-        abiMethods.append(abi.Method("pad", [], abi.Returns("void")))
-
-        return abi.Interface(self.__class__.__name__, abiMethods)
-
-    def get_contract(self, app_id: int) -> abi.Contract:
-        interface = self.get_interface()
-        return abi.Contract(interface.name, app_id, interface.methods)
 
     def handler(self) -> Expr:
         methods = self.get_methods()
@@ -169,6 +157,49 @@ class Application(ABC):
         ]
 
         return Cond(*handlers)
+
+    def get_interface(self) -> abi.Interface:
+        abiMethods = []
+        methods = self.get_methods()
+        for method in methods:
+            f = getattr(self, method)
+            abiMethods.append(abi.Method(f.__name__, f.abi_args, f.abi_returns))
+
+        # TODO: hacked this in for now, to provide extended extended budget
+        abiMethods.append(abi.Method("pad", [], abi.Returns("void")))
+
+        return abi.Interface(self.__class__.__name__, abiMethods)
+
+    def get_contract(self, app_id: int) -> abi.Contract:
+        interface = self.get_interface()
+        return abi.Contract(interface.name, app_id, interface.methods)
+
+    def deploy(self, client: algod.AlgodClient, signer: AccountTransactionSigner) -> abi.Contract:
+        sp = client.suggested_params()
+
+        approval_result = client.compile(self.approval_source())
+        approval_program = base64.b64decode(approval_result["result"])
+
+        clear_result = client.compile(self.clear_source())
+        clear_program = base64.b64decode(clear_result["result"])
+
+        ctx = AtomicTransactionComposer()
+        ctx.add_transaction(
+            TransactionWithSigner(
+                ApplicationCreateTxn(
+                    address_from_private_key(signer.private_key),
+                    sp,
+                    oc.NoOpOC,
+                    approval_program,
+                    clear_program,
+                    self.global_schema(),
+                    self.local_schema(),
+                ),
+                signer,
+            )
+        )
+        result = wait_for_confirmation(client, ctx.submit(client)[0])
+        return self.get_contract(result["application-index"])
 
     def approval_source(self) -> str:
         return compileTeal(
