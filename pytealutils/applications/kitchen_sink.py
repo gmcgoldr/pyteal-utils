@@ -15,20 +15,13 @@ class KitchenSink(ApproveAll):
     @staticmethod
     @ABIMethod
     def reverse(a: abi.String) -> abi.String:
-        idx = ScratchVar()
-        buff = ScratchVar()
+        @Subroutine(TealType.bytes)
+        def reverse(a: TealType.bytes)->Expr:
+            return If(Len(a)==Int(0)).Then(Bytes("")).Else(
+                Concat(Extract(a, Len(a)-Int(1),Int(1)), reverse(Extract(a, Int(0), Len(a)-Int(1))))
+            )
 
-        init = idx.store(Len(a))
-        cond = idx.load() > Int(0)
-        iter = idx.store(idx.load() - Int(1))
-
-        return Seq(
-            buff.store(Bytes("")),
-            For(init, cond, iter).Do(
-                buff.store(Concat(buff.load(), Extract(a, idx.load() - Int(1), Int(1))))
-            ),
-            buff.load(),
-        )
+        return reverse(a)
 
     @staticmethod
     @ABIMethod

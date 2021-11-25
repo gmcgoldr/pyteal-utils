@@ -17,8 +17,9 @@ from algosdk.future.transaction import (
 from algosdk.account import address_from_private_key
 from application import Application
 
-# TODO: signer should return address
-# TODO: create contract from interface and id
+# TODO: pysdk: Signer should return address
+# TODO: pysdk: Contract have static method to create from interface and id
+# TODO: Cache suggested params
 
 
 class ContractClient:
@@ -35,7 +36,6 @@ class ContractClient:
             setattr(self, m.name, m)
 
     def compose(self, ctx: AtomicTransactionComposer, method: Method, args: List[any]):
-        # TODO: cacheme
         sp = self.client.suggested_params()
         ctx.add_method_call(
             self.app_id, method, self.addr, sp, self.signer, method_args=args

@@ -26,7 +26,7 @@ print("Created {}".format(contract.app_id))
 cc = ContractClient(client, contract, signer)
 
 # Single call, increase budget with "pad" method
-result = cc.call(cc.reverse, ["desrever yllufsseccus"], budget=2)
+result = cc.call(cc.reverse, ["desrever yllufsseccus"])
 print("Result of single call: {}".format(result.abi_results[0].return_value))
 
 # Compose from set of
