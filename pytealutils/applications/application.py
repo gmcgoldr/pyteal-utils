@@ -126,6 +126,8 @@ class Application(ABC):
             f = getattr(self, method)
             abiMethods.append(abi.Method(f.__name__, f.abi_args, f.abi_returns))
 
+        abiMethods.append(abi.Method("pad", [], abi.Returns("void")))
+
         return abi.Interface(self.__class__.__name__, abiMethods)
 
     def handler(self) -> Expr:
@@ -135,6 +137,9 @@ class Application(ABC):
             [Txn.application_args[0] == f.abi_selector, f()]
             for f in map(lambda m: getattr(self, m), methods)
         ]
+
+        pad_selector = hashy("pad()void")
+        routes.append([Txn.application_args[0] == pad_selector, Int(1)])
 
         handlers = [
             [Txn.application_id() == Int(0), self.create()],
