@@ -113,34 +113,13 @@ class Application(ABC):
     def clearState(self) -> Expr:
         pass
 
-    def get_methods(self) -> List[str]:
-        base = [
-            "get_methods",
-            "get_interface",
-            "get_contract",
-            "handler",
-            "approval_source",
-            "clear_source",
-            "global_schema",
-            "local_schema",
-            "deploy_app",
-            "update_app",
-            "clearState",
-            "closeOut",
-            "create",
-            "delete",
-            "optIn",
-            "update",
-        ]
-        methods = []
-        for m in dir(self):
-            if m not in base and m[0] != "_":
-                methods.append(m)
-
-        return methods
+    @classmethod
+    def get_methods(cls) -> List[str]:
+        return list(set(dir(cls)) - set(dir(cls.__base__)))
 
     def handler(self) -> Expr:
         methods = self.get_methods()
+        print(methods)
 
         routes = [
             [Txn.application_args[0] == f.abi_selector, f()]

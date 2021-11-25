@@ -1,4 +1,4 @@
-from algosdk import mnemonic, abi
+from algosdk import mnemonic
 from algosdk.atomic_transaction_composer import (
     AtomicTransactionComposer,
     AccountTransactionSigner,

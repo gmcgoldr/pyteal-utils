@@ -7,8 +7,6 @@ from algosdk.atomic_transaction_composer import (
 )
 from algosdk.account import address_from_private_key
 
-# TODO: pysdk: Signer should return address
-# TODO: pysdk: Contract have static method to create from interface and id
 # TODO: Cache suggested params
 
 
