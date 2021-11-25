@@ -37,7 +37,7 @@ def safeGet(idx: TealType.uint64, key: TealType.bytes) -> Expr:
     return Seq(mv, If(mv.hasValue()).Then(mv.value()).Else(Bytes("")))
 
 
-class FileSystem:
+class Blob:
     def __init__(self):
         # Init with max size or specific k/vs to use ?
         # Do we even need a class or can these all

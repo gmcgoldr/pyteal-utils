@@ -1,13 +1,13 @@
 from pyteal import *
-from fs import FileSystem
+from blob import Blob
 
 
 def test():
-    fs = FileSystem()
+    b = Blob()
 
     test = Seq(
-        Pop(fs.write(Int(0), Int(0), Bytes("deadbeef" * 16))),
-        Log(fs.read(Int(0), Int(8), Int(32))),
+        Pop(b.write(Int(0), Int(0), Bytes("deadbeef" * 16))),
+        Log(b.read(Int(0), Int(8), Int(32))),
         Int(1),
     )
     return Cond(

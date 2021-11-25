@@ -2,7 +2,7 @@
 shopt -s expand_aliases
 source ~/.bashrc
 
-python fs_test.py > contract.teal
+python demo.py > contract.teal
 
 sb copyTo contract.teal
 sb copyTo clear.teal
