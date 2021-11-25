@@ -22,7 +22,7 @@ contract = app.create_app(client, signer)
 print("Created {}".format(contract.app_id))
 
 # Update App
-contract = app.update_app(contract.app_id, client, signer)
+contract = app.update_app(client, contract.app_id, signer)
 print("Updated {}".format(contract.app_id))
 
 # Create client to make calls with
@@ -42,5 +42,5 @@ result = comp.execute(cc.client, 2)
 print("Result of group: {}".format([r.return_value for r in result.abi_results]))
 
 # Delete App
-app.delete_app(contract.app_id, client, signer)
+app.delete_app(client, contract.app_id, signer)
 print("Deleted {}".format(contract.app_id))

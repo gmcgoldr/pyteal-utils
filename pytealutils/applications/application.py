@@ -90,6 +90,12 @@ def ABIMethod(func):
 
 
 class Application(ABC):
+    def global_schema(self) -> StateSchema:
+        return StateSchema(0, 0)
+
+    def local_schema(self) -> StateSchema:
+        return StateSchema(0, 0)
+
     @abstractmethod
     def create(self) -> Expr:
         pass
@@ -148,11 +154,10 @@ class Application(ABC):
         return Cond(*handlers)
 
     def get_interface(self) -> abi.Interface:
-        abiMethods = []
-        methods = self.get_methods()
-        for method in methods:
-            f = getattr(self, method)
-            abiMethods.append(abi.Method(f.__name__, f.abi_args, f.abi_returns))
+        abiMethods = [
+            abi.Method(f.__name__, f.abi_args, f.abi_returns)
+            for f in map(lambda m: getattr(self, m), self.get_methods())
+        ]
 
         # TODO: hacked this in for now, to provide extended extended budget
         abiMethods.append(abi.Method("pad", [], abi.Returns("void")))
@@ -162,51 +167,6 @@ class Application(ABC):
     def get_contract(self, app_id: int) -> abi.Contract:
         interface = self.get_interface()
         return abi.Contract(interface.name, app_id, interface.methods)
-
-    def update_app(
-        self, app_id: int, client: algod.AlgodClient, signer: AccountTransactionSigner
-    ):
-        sp = client.suggested_params()
-
-        approval_result = client.compile(self.approval_source())
-        approval_program = base64.b64decode(approval_result["result"])
-
-        clear_result = client.compile(self.clear_source())
-        clear_program = base64.b64decode(clear_result["result"])
-
-        ctx = AtomicTransactionComposer()
-        ctx.add_transaction(
-            TransactionWithSigner(
-                ApplicationUpdateTxn(
-                    address_from_private_key(signer.private_key),
-                    sp,
-                    app_id,
-                    approval_program,
-                    clear_program,
-                ),
-                signer,
-            )
-        )
-        ctx.execute(client, 2)
-        return self.get_contract(app_id)
-
-    def delete_app(
-        self, app_id: int, client: algod.AlgodClient, signer: AccountTransactionSigner
-    ):
-        sp = client.suggested_params()
-
-        ctx = AtomicTransactionComposer()
-        ctx.add_transaction(
-            TransactionWithSigner(
-                ApplicationDeleteTxn(
-                    address_from_private_key(signer.private_key),
-                    sp,
-                    app_id,
-                ),
-                signer,
-            )
-        )
-        return ctx.execute(client, 2)
 
     def create_app(
         self, client: algod.AlgodClient, signer: AccountTransactionSigner
@@ -237,6 +197,51 @@ class Application(ABC):
         result = wait_for_confirmation(client, ctx.submit(client)[0])
         return self.get_contract(result["application-index"])
 
+    def update_app(
+        self, client: algod.AlgodClient, app_id: int, signer: AccountTransactionSigner
+    ):
+        sp = client.suggested_params()
+
+        approval_result = client.compile(self.approval_source())
+        approval_program = base64.b64decode(approval_result["result"])
+
+        clear_result = client.compile(self.clear_source())
+        clear_program = base64.b64decode(clear_result["result"])
+
+        ctx = AtomicTransactionComposer()
+        ctx.add_transaction(
+            TransactionWithSigner(
+                ApplicationUpdateTxn(
+                    address_from_private_key(signer.private_key),
+                    sp,
+                    app_id,
+                    approval_program,
+                    clear_program,
+                ),
+                signer,
+            )
+        )
+        ctx.execute(client, 2)
+        return self.get_contract(app_id)
+
+    def delete_app(
+        self, client: algod.AlgodClient, app_id: int, signer: AccountTransactionSigner
+    ):
+        sp = client.suggested_params()
+
+        ctx = AtomicTransactionComposer()
+        ctx.add_transaction(
+            TransactionWithSigner(
+                ApplicationDeleteTxn(
+                    address_from_private_key(signer.private_key),
+                    sp,
+                    app_id,
+                ),
+                signer,
+            )
+        )
+        return ctx.execute(client, 2)
+
     def approval_source(self) -> str:
         return compileTeal(
             self.handler(), mode=Mode.Application, version=5, assembleConstants=True
@@ -244,9 +249,3 @@ class Application(ABC):
 
     def clear_source(self) -> str:
         return "#pragma version 5;int 1;return".replace(";", "\n")
-
-    def global_schema(self) -> StateSchema:
-        return StateSchema(0, 0)
-
-    def local_schema(self) -> StateSchema:
-        return StateSchema(0, 0)
