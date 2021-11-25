@@ -119,7 +119,6 @@ class Application(ABC):
 
     def handler(self) -> Expr:
         methods = self.get_methods()
-        print(methods)
 
         routes = [
             [Txn.application_args[0] == f.abi_selector, f()]
@@ -225,10 +224,7 @@ class Application(ABC):
         )
 
     def clear_source(self) -> str:
-        return """#pragma version 5
-int 1
-return
-"""
+        return "#pragma version 5;int 1;return".replace(";", "\n")
 
     def global_schema(self) -> StateSchema:
         return StateSchema(0, 0)
