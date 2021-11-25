@@ -1,21 +1,11 @@
-import base64
 from typing import List
-from algosdk.v2client import algod
 from algosdk.abi import Method, Contract
 from algosdk.v2client.algod import AlgodClient
 from algosdk.atomic_transaction_composer import (
     AtomicTransactionComposer,
-    TransactionWithSigner,
     TransactionSigner,
 )
-from algosdk.future.transaction import (
-    ApplicationCreateTxn,
-    ApplicationNoOpTxn,
-    OnComplete,
-    wait_for_confirmation,
-)
 from algosdk.account import address_from_private_key
-from application import Application
 
 # TODO: pysdk: Signer should return address
 # TODO: pysdk: Contract have static method to create from interface and id

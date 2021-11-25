@@ -18,9 +18,13 @@ client = AlgodClient("a" * 64, "http://localhost:4002")
 app = KitchenSink()
 
 # Deploy
-contract = app.deploy(client, signer)
+#contract = app.deploy_app(client, signer)
+#print("Created {}".format(contract.app_id))
 
-print("Created {}".format(contract.app_id))
+#update
+contract = app.update_app(306, client, signer)
+print("Updated {}".format(contract.app_id))
+
 
 # Create client to make calls with
 cc = ContractClient(client, contract, signer)

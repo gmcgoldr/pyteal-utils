@@ -7,7 +7,7 @@ from algosdk import abi
 from algosdk.account import address_from_private_key
 from pyteal import *
 from algosdk.v2client import algod 
-from algosdk.future.transaction import ApplicationCreateTxn, StateSchema, wait_for_confirmation, OnComplete as oc
+from algosdk.future.transaction import ApplicationUpdateTxn, ApplicationCreateTxn, StateSchema, wait_for_confirmation, OnComplete as oc
 from algosdk.atomic_transaction_composer import AccountTransactionSigner, AtomicTransactionComposer, TransactionWithSigner
 import base64
 
@@ -113,7 +113,8 @@ class Application(ABC):
             "clear_source",
             "global_schema",
             "local_schema",
-            "deploy",
+            "deploy_app",
+            "update_app",
             "clearState",
             "closeOut",
             "create",
@@ -174,7 +175,32 @@ class Application(ABC):
         interface = self.get_interface()
         return abi.Contract(interface.name, app_id, interface.methods)
 
-    def deploy(self, client: algod.AlgodClient, signer: AccountTransactionSigner) -> abi.Contract:
+    def update_app(self, app_id: int, client: algod.AlgodClient, signer: AccountTransactionSigner):
+        sp = client.suggested_params()
+
+        approval_result = client.compile(self.approval_source())
+        approval_program = base64.b64decode(approval_result["result"])
+
+        clear_result = client.compile(self.clear_source())
+        clear_program = base64.b64decode(clear_result["result"])
+
+        ctx = AtomicTransactionComposer()
+        ctx.add_transaction(
+            TransactionWithSigner(
+                ApplicationUpdateTxn(
+                    address_from_private_key(signer.private_key),
+                    sp,
+                    app_id,
+                    approval_program,
+                    clear_program,
+                ),
+                signer,
+            )
+        )
+        ctx.execute(client, 2)
+        return self.get_contract(app_id)
+
+    def deploy_app(self, client: algod.AlgodClient, signer: AccountTransactionSigner) -> abi.Contract:
         sp = client.suggested_params()
 
         approval_result = client.compile(self.approval_source())
