@@ -16,9 +16,16 @@ class KitchenSink(ApproveAll):
     @ABIMethod
     def reverse(a: abi.String) -> abi.String:
         @Subroutine(TealType.bytes)
-        def reverse(a: TealType.bytes)->Expr:
-            return If(Len(a)==Int(0)).Then(Bytes("")).Else(
-                Concat(Extract(a, Len(a)-Int(1),Int(1)), reverse(Extract(a, Int(0), Len(a)-Int(1))))
+        def reverse(a: TealType.bytes) -> Expr:
+            return (
+                If(Len(a) == Int(0))
+                .Then(Bytes(""))
+                .Else(
+                    Concat(
+                        Extract(a, Len(a) - Int(1), Int(1)),
+                        reverse(Extract(a, Int(0), Len(a) - Int(1))),
+                    )
+                )
             )
 
         return reverse(a)

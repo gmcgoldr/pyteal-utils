@@ -10,19 +10,21 @@ from client import ContractClient
 from kitchen_sink import KitchenSink
 
 mnemonic = "movie resource mimic casino kid alpha grass library addict olympic bind when negative slam doll spawn crazy firm material frame reject humble join above crumble"
-sk      = to_private_key(mnemonic)
-signer  = AccountTransactionSigner(sk)
+sk = to_private_key(mnemonic)
+signer = AccountTransactionSigner(sk)
 
 client = AlgodClient("a" * 64, "http://localhost:4002")
 
 app = KitchenSink()
 
+app_id = 306
 # Deploy
-#contract = app.deploy_app(client, signer)
-#print("Created {}".format(contract.app_id))
+# contract = app.deploy_app(client, signer)
+# app_id=contract.app_id
+# print("Created {}".format(contract.app_id))
 
-#update
-contract = app.update_app(306, client, signer)
+# update
+contract = app.update_app(app_id, client, signer)
 print("Updated {}".format(contract.app_id))
 
 

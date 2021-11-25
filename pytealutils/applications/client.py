@@ -13,10 +13,12 @@ from algosdk.account import address_from_private_key
 
 
 class ContractClient:
-    def __init__(self, client: AlgodClient, contract: Contract, signer: TransactionSigner = None):
-        self.client = client 
+    def __init__(
+        self, client: AlgodClient, contract: Contract, signer: TransactionSigner = None
+    ):
+        self.client = client
 
-        self.contract = contract 
+        self.contract = contract
         self.app_id = contract.app_id
         self.signer = signer
 

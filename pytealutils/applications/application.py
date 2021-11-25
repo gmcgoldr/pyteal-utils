@@ -1,14 +1,24 @@
 from abc import ABC, abstractmethod
-from typing import  List, OrderedDict
+from typing import List, OrderedDict
 from inspect import signature
 from functools import wraps
 from Cryptodome.Hash import SHA512
 from algosdk import abi
 from algosdk.account import address_from_private_key
 from pyteal import *
-from algosdk.v2client import algod 
-from algosdk.future.transaction import ApplicationUpdateTxn, ApplicationCreateTxn, StateSchema, wait_for_confirmation, OnComplete as oc
-from algosdk.atomic_transaction_composer import AccountTransactionSigner, AtomicTransactionComposer, TransactionWithSigner
+from algosdk.v2client import algod
+from algosdk.future.transaction import (
+    ApplicationUpdateTxn,
+    ApplicationCreateTxn,
+    StateSchema,
+    wait_for_confirmation,
+    OnComplete as oc,
+)
+from algosdk.atomic_transaction_composer import (
+    AccountTransactionSigner,
+    AtomicTransactionComposer,
+    TransactionWithSigner,
+)
 import base64
 
 from sys import path
@@ -129,7 +139,6 @@ class Application(ABC):
 
         return methods
 
-
     def handler(self) -> Expr:
         methods = self.get_methods()
 
@@ -175,7 +184,9 @@ class Application(ABC):
         interface = self.get_interface()
         return abi.Contract(interface.name, app_id, interface.methods)
 
-    def update_app(self, app_id: int, client: algod.AlgodClient, signer: AccountTransactionSigner):
+    def update_app(
+        self, app_id: int, client: algod.AlgodClient, signer: AccountTransactionSigner
+    ):
         sp = client.suggested_params()
 
         approval_result = client.compile(self.approval_source())
@@ -200,7 +211,9 @@ class Application(ABC):
         ctx.execute(client, 2)
         return self.get_contract(app_id)
 
-    def deploy_app(self, client: algod.AlgodClient, signer: AccountTransactionSigner) -> abi.Contract:
+    def deploy_app(
+        self, client: algod.AlgodClient, signer: AccountTransactionSigner
+    ) -> abi.Contract:
         sp = client.suggested_params()
 
         approval_result = client.compile(self.approval_source())
