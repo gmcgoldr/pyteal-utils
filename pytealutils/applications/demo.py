@@ -38,7 +38,7 @@ try:
     print("Result of single call: {}".format(result.abi_results[0].return_value))
 
     # Single call, increase budget with "pad" method
-    result = cc.call(cc.split, ["this string is split"])
+    result = cc.call(cc.split, ["this string is split"], budget=3)
     print("Result of single call: {}".format(result.abi_results[0].return_value))
 
     # Compose from set of app calls

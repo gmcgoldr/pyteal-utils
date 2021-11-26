@@ -6,6 +6,7 @@ from algosdk.atomic_transaction_composer import (
     TransactionSigner,
 )
 from algosdk.account import address_from_private_key
+from nacl.utils import random
 
 # TODO: Cache suggested params
 
@@ -39,7 +40,8 @@ class ContractClient:
             self.app_id, method, self.addr, sp, self.signer, method_args=args
         )
 
+        import os
         for _ in range(budget - 1):
-            ctx.add_method_call(self.app_id, self.pad, self.addr, sp, self.signer)
+            ctx.add_method_call(self.app_id, self.pad, self.addr, sp, self.signer,note=os.urandom(5))
 
         return ctx.execute(self.client, 2)

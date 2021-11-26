@@ -35,13 +35,27 @@ class KitchenSink(ApproveAll):
     @ABIMethod
     def split(a: abi.String)->abi.DynamicArray[abi.String]:
         l    = abi.DynamicArray[abi.String]()
+        idx = ScratchVar()
+        lastIdx = ScratchVar()
+
+        init = idx.store(Int(0))
+        cond = idx.load()<Len(a)
+        iter = idx.store(idx.load() + Int(1))
+
         # Fake it, just testing array return
         return Seq(
+
             l.create(),
-            l.push(Bytes("This")),
-            l.push(Bytes("String")),
-            l.push(Bytes("Is")),
-            l.push(Bytes("Split")),
+            lastIdx.store(Int(0)),
+            For(init, cond, iter).Do(
+                If(GetByte(a, idx.load()) == Int(32)).Then(
+                    Seq(
+                        l.push(Substring(a, lastIdx.load(), idx.load())),
+                        lastIdx.store(idx.load())
+                    )
+                )
+            ),
+            l.push(Substring(a, lastIdx.load(), idx.load())),
             l.serialize()
         )
 
