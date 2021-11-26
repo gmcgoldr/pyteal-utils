@@ -72,7 +72,7 @@ class KitchenSink(ApproveAll):
                 idx.store(Int(0)),
                 idx.load() < l.len.load(),
                 idx.store(idx.load() + Int(1)),
-            ).Do(buff.store(Concat(buff.load(), l[idx.load()]))),
+            ).Do(buff.store(Concat(buff.load(), Bytes(" "), l[idx.load()]))),
             buff.load(),
         )
 
