@@ -42,7 +42,6 @@ def ABIReturn(b: TealType.bytes) -> Expr:
     return Log(Concat(Bytes("base16", "0x151f7c75"), b))
 
 
-
 def ABIMethod(func):
     sig = signature(func)
     returns = sig.return_annotation
@@ -54,7 +53,7 @@ def ABIMethod(func):
     setattr(func, "abi_signature", method)
     setattr(func, "abi_selector", selector)
     setattr(func, "abi_args", [abi.Argument(arg) for arg in args])
-    setattr(func, "abi_returns", abi.Returns(returns.__name__.lower()))
+    setattr(func, "abi_returns", abi.Returns(tealabi.abiTypeName(returns)))
 
     # Get the types specified in the method
     abi_codec = [v.annotation for v in sig.parameters.values()]
@@ -86,9 +85,7 @@ def ABIMethod(func):
             ),
             Int(1),
         )
-
     return wrapper
-
 
 class Application(ABC):
     def global_schema(self) -> StateSchema:

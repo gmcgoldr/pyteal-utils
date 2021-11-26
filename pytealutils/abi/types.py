@@ -145,11 +145,24 @@ class FixedArray(Generic[T]):
         return value
 
 class DynamicArray(Generic[T]):
+
     stack_type = TealType.bytes
 
-    def __init__(self, data: TealType.bytes):
-        self.len = ExtractUint16(data, Int(0))
-        self.data = Extract(data, Int(2), Len(data) - Int(2))
+    len = ScratchVar(TealType.uint64)
+    data = ScratchVar(TealType.bytes) 
+
+    def wrap(self, data: TealType.bytes)->Expr:
+        return Seq(
+            self.len.store(ExtractUint16(data, Int(0))),
+            self.data.store(Extract(data, Int(2), Len(data) - Int(2))),
+        )
+
+    def create(self)->Expr:
+        return Seq(
+            self.len.store(Int(0)),
+            self.data.store(Bytes(""))
+        )
+
     
     def __getitem__(self, idx: Union[Int, int]) -> T:
         if isinstance(idx, int):
@@ -158,14 +171,34 @@ class DynamicArray(Generic[T]):
 
     def get(self, idx: Int) -> T:
         if self.__orig_class__.__args__[0] is String:
-            return tuple_get_bytes(self.data, idx)
+            return tuple_get_bytes(self.data.load(), idx)
         elif self.__orig_class__.__args__[0] is Address:
-            return tuple_get_address(self.data, idx)
+            return tuple_get_address(self.data.load(), idx)
         else:
-            return tuple_get_int(self.data, Int(64), idx)
+            return tuple_get_int(self.data.load(), Int(64), idx)
 
-    def append(b: TealType.bytes):
-        pass
+    def push(self, b: TealType.bytes):
+        if self.__orig_class__.__args__[0] is String:
+            return Seq(
+                self.data.store(Concat(
+                    Substring(self.data.load(), Int(0), self.len.load()*Int(2)),  # byte positions
+                    Uint16.encode(Len(self.data.load())),
+                    Substring(self.data.load(), self.len.load()*Int(2), Len(self.data.load())),
+                    Uint16.encode(Len(b)),
+                    b
+                )),
+                self.len.store(self.len.load() + Int(1))
+            )
+        elif self.__orig_class__.__args__[0] is Address:
+            return Assert(Int(0)) 
+        else:
+            return Assert(Int(0))
+
+    def serialize(self) -> Bytes:
+        return Concat(
+            Uint16.encode(self.len.load()),
+            self.data.load()
+        )
 
     @staticmethod
     @Subroutine(TealType.bytes)
@@ -175,7 +208,7 @@ class DynamicArray(Generic[T]):
     @staticmethod
     @Subroutine(TealType.bytes)
     def encode(value: TealType.bytes) -> Expr:
-        return Bytes("")
+        return value 
 
 class Tuple(Generic[T]):
     stack_type = TealType.bytes

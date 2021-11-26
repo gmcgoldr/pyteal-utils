@@ -33,20 +33,31 @@ class KitchenSink(ApproveAll):
     
     @staticmethod
     @ABIMethod
+    def split(a: abi.String)->abi.DynamicArray[abi.String]:
+        l    = abi.DynamicArray[abi.String]()
+        # Fake it, just testing array return
+        return Seq(
+            l.create(),
+            l.push(Bytes("This")),
+            l.push(Bytes("String")),
+            l.push(Bytes("Is")),
+            l.push(Bytes("Split")),
+            l.serialize()
+        )
+
+    @staticmethod
+    @ABIMethod
     def concat(a: abi.DynamicArray[abi.String])->abi.String:
 
-        l = abi.DynamicArray[abi.String](a)
+        #TODO: this seems dumb from an api POV, we should be able to just operate on it directly
+        l = abi.DynamicArray[abi.String]()
 
         idx = ScratchVar()
         buff = ScratchVar()
-
-        init = idx.store(Int(0))
-        cond = idx.load() < l.len
-        iter = idx.store(idx.load() + Int(1))
-
         return Seq(
+            l.wrap(a),
             buff.store(Bytes("")),
-            For(init, cond, iter).Do(
+            For(idx.store(Int(0)), idx.load() < l.len.load(), idx.store(idx.load() + Int(1))).Do(
                 buff.store(Concat(buff.load(), l[idx.load()]))
             ),
             buff.load()
