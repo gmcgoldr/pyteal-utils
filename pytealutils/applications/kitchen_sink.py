@@ -30,40 +30,37 @@ class KitchenSink(ApproveAll):
             )
 
         return reverse(a)
-    
+
     @staticmethod
     @ABIMethod
-    def split(a: abi.String)->abi.DynamicArray[abi.String]:
-        l    = abi.DynamicArray[abi.String]()
+    def split(a: abi.String) -> abi.DynamicArray[abi.String]:
+        l = abi.DynamicArray[abi.String]()
         idx = ScratchVar()
         lastIdx = ScratchVar()
 
         init = idx.store(Int(0))
-        cond = idx.load()<Len(a)
+        cond = idx.load() < Len(a)
         iter = idx.store(idx.load() + Int(1))
 
-        # Fake it, just testing array return
         return Seq(
-
             l.create(),
             lastIdx.store(Int(0)),
             For(init, cond, iter).Do(
-                If(GetByte(a, idx.load()) == Int(32)).Then(
+                If(GetByte(a, idx.load()) == Int(32)).Then(  # 32 is space in ascii
                     Seq(
                         l.push(Substring(a, lastIdx.load(), idx.load())),
-                        lastIdx.store(idx.load())
+                        lastIdx.store(idx.load()),
                     )
                 )
             ),
             l.push(Substring(a, lastIdx.load(), idx.load())),
-            l.serialize()
+            l.serialize(),
         )
 
     @staticmethod
     @ABIMethod
-    def concat(a: abi.DynamicArray[abi.String])->abi.String:
-
-        #TODO: this seems dumb from an api POV, we should be able to just operate on it directly
+    def concat(a: abi.DynamicArray[abi.String]) -> abi.String:
+        # TODO: this seems dumb from an api POV, we should be able to just operate on it directly
         l = abi.DynamicArray[abi.String]()
 
         idx = ScratchVar()
@@ -71,12 +68,13 @@ class KitchenSink(ApproveAll):
         return Seq(
             l.wrap(a),
             buff.store(Bytes("")),
-            For(idx.store(Int(0)), idx.load() < l.len.load(), idx.store(idx.load() + Int(1))).Do(
-                buff.store(Concat(buff.load(), l[idx.load()]))
-            ),
-            buff.load()
+            For(
+                idx.store(Int(0)),
+                idx.load() < l.len.load(),
+                idx.store(idx.load() + Int(1)),
+            ).Do(buff.store(Concat(buff.load(), l[idx.load()]))),
+            buff.load(),
         )
-
 
     @staticmethod
     @ABIMethod

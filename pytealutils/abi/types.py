@@ -121,7 +121,7 @@ class Uint32(ABIType):
     @staticmethod
     @Subroutine(TealType.uint64)
     def decode(value: Bytes) -> Expr:
-        return ExtractUint16(value, Int(0))
+        return ExtractUint32(value, Int(0))
 
     @staticmethod
     @Subroutine(TealType.bytes)

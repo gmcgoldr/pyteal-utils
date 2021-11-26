@@ -41,7 +41,10 @@ class ContractClient:
         )
 
         import os
+
         for _ in range(budget - 1):
-            ctx.add_method_call(self.app_id, self.pad, self.addr, sp, self.signer,note=os.urandom(5))
+            ctx.add_method_call(
+                self.app_id, self.pad, self.addr, sp, self.signer, note=os.urandom(5)
+            )
 
         return ctx.execute(self.client, 2)
