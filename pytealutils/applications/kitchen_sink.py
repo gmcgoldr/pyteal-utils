@@ -7,6 +7,7 @@ import json
 from sys import path
 from os.path import dirname, abspath
 
+
 path.append(dirname(abspath(__file__)) + "/..")
 import abi
 
@@ -29,6 +30,28 @@ class KitchenSink(ApproveAll):
             )
 
         return reverse(a)
+    
+    @staticmethod
+    @ABIMethod
+    def concat(a: abi.DynamicArray[abi.String])->abi.String:
+
+        l = abi.DynamicArray[abi.String](a)
+
+        idx = ScratchVar()
+        buff = ScratchVar()
+
+        init = idx.store(Int(0))
+        cond = idx.load() < l.len
+        iter = idx.store(idx.load() + Int(1))
+
+        return Seq(
+            buff.store(Bytes("")),
+            For(init, cond, iter).Do(
+                buff.store(Concat(buff.load(), l[idx.load()]))
+            ),
+            buff.load()
+        )
+
 
     @staticmethod
     @ABIMethod

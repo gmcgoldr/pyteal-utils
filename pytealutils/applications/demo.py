@@ -21,26 +21,34 @@ app = KitchenSink()
 contract = app.create_app(client, signer)
 print("Created {}".format(contract.app_id))
 
-# Update App
-contract = app.update_app(client, contract.app_id, signer)
-print("Updated {}".format(contract.app_id))
+try:
+    # Update App
+    contract = app.update_app(client, contract.app_id, signer)
+    print("Updated {}".format(contract.app_id))
 
-# Create client to make calls with
-cc = ContractClient(client, contract, signer)
+    # Create client to make calls with
+    cc = ContractClient(client, contract, signer)
 
-# Single call, increase budget with "pad" method
-result = cc.call(cc.reverse, ["desrever yllufsseccus"])
-print("Result of single call: {}".format(result.abi_results[0].return_value))
+    # Single call, increase budget with "pad" method
+    result = cc.call(cc.reverse, ["desrever yllufsseccus"])
+    print("Result of single call: {}".format(result.abi_results[0].return_value))
 
-# Compose from set of app calls
-comp = AtomicTransactionComposer()
-cc.compose(comp, cc.add, [1, 1])
-cc.compose(comp, cc.sub, [3, 1])
-cc.compose(comp, cc.div, [4, 2])
-cc.compose(comp, cc.mul, [3, 2])
-result = comp.execute(cc.client, 2)
-print("Result of group: {}".format([r.return_value for r in result.abi_results]))
+    # Single call, increase budget with "pad" method
+    result = cc.call(cc.concat, [["this", "string", "is", "joined"]])
+    print("Result of single call: {}".format(result.abi_results[0].return_value))
 
-# Delete App
-app.delete_app(client, contract.app_id, signer)
-print("Deleted {}".format(contract.app_id))
+    # Compose from set of app calls
+    #comp = AtomicTransactionComposer()
+    #cc.compose(comp, cc.add, [1, 1])
+    #cc.compose(comp, cc.sub, [3, 1])
+    #cc.compose(comp, cc.div, [4, 2])
+    #cc.compose(comp, cc.mul, [3, 2])
+    #result = comp.execute(cc.client, 2)
+    #print("Result of group: {}".format([r.return_value for r in result.abi_results]))
+
+except Exception as e :
+    print("Fail: {}".format(e))
+finally:
+    # Delete App
+    app.delete_app(client, contract.app_id, signer)
+    print("Deleted {}".format(contract.app_id))

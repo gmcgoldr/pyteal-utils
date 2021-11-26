@@ -42,12 +42,13 @@ def ABIReturn(b: TealType.bytes) -> Expr:
     return Log(Concat(Bytes("base16", "0x151f7c75"), b))
 
 
+
 def ABIMethod(func):
     sig = signature(func)
     returns = sig.return_annotation
 
-    args = [v.annotation.__name__.lower() for v in sig.parameters.values()]
-    method = "{}({}){}".format(func.__name__, ",".join(args), returns.__name__.lower())
+    args = [tealabi.abiTypeName(v.annotation) for v in sig.parameters.values()]
+    method = "{}({}){}".format(func.__name__, ",".join(args), tealabi.abiTypeName(returns))
     selector = hashy(method)
 
     setattr(func, "abi_signature", method)
