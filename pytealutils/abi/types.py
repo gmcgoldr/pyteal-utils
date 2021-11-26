@@ -38,6 +38,47 @@ def tuple_get_int(b: TealType.bytes, size: TealType.uint64, idx: TealType.uint64
         Extract(b, pos.load(), Extract(b, pos.load(), size/Int(8)))
     )
 
+@Subroutine(TealType.bytes)
+def tuple_add_bytes(data: TealType.bytes, length: TealType.uint64, b: TealType.bytes)->Expr:
+    idx = ScratchVar(TealType.uint64)
+    init = idx.store(Int(0))
+    cond = idx.load()<length
+    iter = idx.store(idx.load() + Int(1))
+
+    buff = ScratchVar(TealType.bytes)
+
+    return Seq(
+        buff.store(Bytes("")),
+        For(init, cond, iter).Do(
+            buff.store(
+                Concat(
+                    buff.load(),
+                    Uint16.encode(ExtractUint16(data, idx.load()*Int(2)) + Int(2))
+                )
+            )
+        ),
+        Concat(
+            buff.load(),
+
+            #Set position of new data
+            Uint16.encode(Len(data)+Int(2)),
+
+            #Add existing bytes back
+            Substring(data, length*Int(2), Len(data)),
+
+            # Add bytes prefixed with length
+            Uint16.encode(Len(b)), b
+        )
+    )
+
+@Subroutine(TealType.bytes)
+def tuple_add_address(a: TealType.bytes, b: TealType.bytes):
+    pass
+
+@Subroutine(TealType.bytes)
+def tuple_add_int(a: TealType.bytes, b: TealType.bytes):
+    pass
+
 def abiTypeName(t)->str:
     if hasattr(t, "__name__"):
         return t.__name__.lower()
@@ -180,13 +221,7 @@ class DynamicArray(Generic[T]):
     def push(self, b: TealType.bytes):
         if self.__orig_class__.__args__[0] is String:
             return Seq(
-                self.data.store(Concat(
-                    Substring(self.data.load(), Int(0), self.len.load()*Int(2)),  # byte positions
-                    Uint16.encode(Len(self.data.load())),
-                    Substring(self.data.load(), self.len.load()*Int(2), Len(self.data.load())),
-                    Uint16.encode(Len(b)),
-                    b
-                )),
+                self.data.store(tuple_add_bytes(self.data.load(), self.len.load(), b)),
                 self.len.store(self.len.load() + Int(1))
             )
         elif self.__orig_class__.__args__[0] is Address:
