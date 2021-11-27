@@ -1,12 +1,12 @@
-from pyteal import ScratchVar, Int, For, Seq, Expr, TealType, Subroutine
+from pyteal import ScratchVar, Int, For, Expr, TealType, Subroutine
 
 
 @Subroutine(TealType.none)
-def range(n: TealType.uint64, method: Expr):
+def range(n: TealType.uint64, method: Expr) -> Expr:
     i = ScratchVar()
 
     init = i.store(0)
-    cond = init.load() < n
-    iter = init.Store(init.Load() + Int(1))
+    cond = i.load() < n
+    iter = i.store(i.load() + Int(1))
 
-    return Seq(init.Store(0), For(init, cond, iter).Do(method), Int(1))
+    return For(init, cond, iter).Do(method)
