@@ -53,6 +53,7 @@ def tuple_add_bytes(data: TealType.bytes, length: TealType.uint64, b: TealType.b
     return Seq(
         Concat(
 
+            #Update positions to add 2, accounting for newly added position
             binary_add_list(Extract(data, Int(0), Int(2)*length), length, Int(2)),
 
             # Set position of new data
@@ -77,32 +78,15 @@ def tuple_add_int(a: TealType.bytes, b: TealType.bytes):
 @Subroutine(TealType.bytes)
 def binary_add_list(data: TealType.bytes, len: TealType.uint64, val: TealType.uint64)->Expr:
     return If(len>Int(0)).Then(Concat( 
-            binary_add_list(Extract(data, Int(0), len*Int(2)), len - Int(1), val),
-            Uint16.encode(binary_add(ExtractUint16(data, (len*Int(2))-Int(2)), val)),
-        )
-    ).Else(
-        Bytes("")
-    )
-    return Seq(
-        buff.store(Bytes("")),
-        For(init, cond, iter).Do(
-            buff.store(Concat(
-                buff.load(),
-            ))
-        ) ,
-        buff.load()
-    )
+        binary_add_list(Extract(data, Int(0), len*Int(2)), len - Int(1), val),
+        Uint16.encode(binary_add(ExtractUint16(data, (len*Int(2))-Int(2)), val)),
+    )).Else(Bytes(""))
 
 @Subroutine(TealType.uint64)
 def binary_add(a: TealType.uint64, b: TealType.uint64) -> Expr:
     return If(b==Int(0)).Then(a).Else(
         binary_add(a^b, (a&b) << Int(1))
     )
-#@Subroutine(TealType.bytes)
-#def binary_add(a: TealType.bytes, b: TealType.bytes) -> Expr:
-#    return If(Len(b)==Int(0)).Then(a).Else(
-#        binary_add(BytesXor(a, b), BytesAnd(a,b) << Int(1))
-#    )
 
 
 class Uint64(ABIType):
@@ -173,8 +157,6 @@ class Address(ABIType):
 
 T = TypeVar('T', bound=ABIType)
 
-
-    
 class FixedArray(Generic[T]):
     stack_type = TealType.bytes
 
@@ -207,7 +189,6 @@ class DynamicArray(Generic[T]):
             self.data.store(Bytes(""))
         )
 
-    
     def __getitem__(self, idx: Union[Int, int]) -> T:
         if isinstance(idx, int):
             idx = Int(idx) 

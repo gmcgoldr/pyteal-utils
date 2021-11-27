@@ -48,7 +48,6 @@ try:
     cc.compose(cc.div, [4, 2], comp)
     cc.compose(cc.mul, [3, 2], comp)
     print_results(comp.execute(cc.client, 2))
-
 except Exception as e:
     print("Fail: {}".format(e))
 finally:
