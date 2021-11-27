@@ -40,19 +40,17 @@ class KitchenSink(ApproveAll):
         def rsplit(
             data: TealType.bytes, idx: TealType.uint64, lastIdx: TealType.uint64
         ) -> Expr:
-            return (
-                If(Len(data) == idx)
-                .Then(
-                    l.push(Substring(data, lastIdx, idx)),
-                )
-                .ElseIf(GetByte(data, idx) == Int(32))
-                .Then(
+            return If(
+                Len(data) == idx,
+                l.push(Substring(data, lastIdx, idx)),
+                If(
+                    GetByte(data, idx) == Int(32),
                     Seq(
                         l.push(Substring(data, lastIdx, idx)),
                         rsplit(data, idx + Int(1), idx),
-                    )
-                )
-                .Else(rsplit(data, idx + Int(1), lastIdx))
+                    ),
+                    rsplit(data, idx + Int(1), lastIdx),
+                ),
             )
 
         return Seq(l.create(), rsplit(a, Int(0), Int(0)), l.serialize())

@@ -9,35 +9,37 @@ from algosdk.mnemonic import *
 from client import ContractClient
 from kitchen_sink import KitchenSink
 
-mnemonic = "movie resource mimic casino kid alpha grass library addict olympic bind when negative slam doll spawn crazy firm material frame reject humble join above crumble"
-sk = to_private_key(mnemonic)
-signer = AccountTransactionSigner(sk)
 
+def print_results(results):
+    for result in results.abi_results:
+        print("Result: {}".format(result.return_value))
+
+
+# Free money
+mnemonic = "movie resource mimic casino kid alpha grass library addict olympic bind when negative slam doll spawn crazy firm material frame reject humble join above crumble"
+signer = AccountTransactionSigner(to_private_key(mnemonic))
+
+# Connect to sandbox
 client = AlgodClient("a" * 64, "http://localhost:4002")
 
+
+# Instantiate App Object that is also our pyteal
 app = KitchenSink()
 
-# Create App
+# Create app on chain
 contract = app.create_app(client, signer)
 print("Created {}".format(contract.app_id))
 
+# Create client to make calls with
+cc = ContractClient(client, contract, signer)
+
 try:
-    # Update App
-    contract = app.update_app(client, contract.app_id, signer)
-    print("Updated {}".format(contract.app_id))
+    print_results(cc.call(cc.reverse, ["desrever yllufsseccus"]))
 
-    # Create client to make calls with
-    cc = ContractClient(client, contract, signer)
-
-    result = cc.call(cc.reverse, ["desrever yllufsseccus"])
-    print("Result of single call: {}".format(result.abi_results[0].return_value))
-
-    result = cc.call(cc.concat, [["this", "string", "is", "joined"]])
-    print("Result of single call: {}".format(result.abi_results[0].return_value))
+    print_results(cc.call(cc.concat, [["this", "string", "is", "joined"]]))
 
     # Single call, increase budget with dummy calls
-    result = cc.call(cc.split, ["this string is split"], budget=3)
-    print("Result of single call: {}".format(result.abi_results[0].return_value))
+    print_results(cc.call(cc.split, ["this string is split"], budget=3))
 
     # Compose from set of app calls
     comp = AtomicTransactionComposer()
@@ -45,12 +47,10 @@ try:
     cc.compose(cc.sub, [3, 1], comp)
     cc.compose(cc.div, [4, 2], comp)
     cc.compose(cc.mul, [3, 2], comp)
-    result = comp.execute(cc.client, 2)
-    print("Result of group: {}".format([r.return_value for r in result.abi_results]))
+    print_results(comp.execute(cc.client, 2))
 
 except Exception as e:
     print("Fail: {}".format(e))
 finally:
-    # Delete App
     app.delete_app(client, contract.app_id, signer)
     print("Deleted {}".format(contract.app_id))
