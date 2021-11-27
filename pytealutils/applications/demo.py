@@ -12,7 +12,7 @@ from kitchen_sink import KitchenSink
 
 def print_results(results):
     for result in results.abi_results:
-        print("Raw Result: {}".format(result.raw_value.hex()))
+        print("Raw Result: {}".format(result.raw_value))
         print("Parsed Result: {}".format(result.return_value))
 
 
@@ -44,9 +44,9 @@ try:
 
     # Compose from set of app calls
     comp = AtomicTransactionComposer()
-    # cc.compose(cc.add, [1, 1], comp)
-    # cc.compose(cc.sub, [3, 1], comp)
-    # cc.compose(cc.div, [4, 2], comp)
+    cc.compose(cc.add, [1, 1], comp)
+    cc.compose(cc.sub, [3, 1], comp)
+    cc.compose(cc.div, [4, 2], comp)
     cc.compose(cc.mul, [3, 2], comp)
     print_results(comp.execute(cc.client, 2))
 except Exception as e:

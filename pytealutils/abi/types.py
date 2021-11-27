@@ -102,6 +102,16 @@ def encode_string_lengths(b: TealType.bytes, lengths: TealType.bytes)->Expr:
     )
 
 @Subroutine(TealType.bytes)
+def encode_string_positions(lengths: TealType.bytes, positions: TealType.bytes, start: TealType.uint64)->Expr:
+    return If(Len(lengths) == Int(0)).Then(positions).Else(
+        encode_string_positions(
+            Substring(lengths, Int(2), Len(lengths)),
+            Concat(positions, Uint16.encode(start)),
+            start + Uint16(lengths) + Int(2)
+        )
+    )
+
+@Subroutine(TealType.bytes)
 def sum_string_lengths(lengths: TealType.bytes, idx: TealType.uint64, sum: TealType.uint64)->Expr:
     return If(idx == Int(0)).Then(sum).Else(
         sum_string_lengths(
@@ -194,17 +204,25 @@ class DynamicArray(Generic[T]):
         self.value = data 
 
     def init(self)->Expr:
-        return Seq(
-            self.size.store(ExtractUint16(self.value, Int(0))),
-            self.bytes.store(Substring(
-                self.value, 
-                (Int(2)*self.size.load())+Int(2), 
-                Len(self.value)
-            )),
-            self.lengths.store(
-                encode_string_lengths(self.bytes.load(), Bytes(""))
+        return If(Len(self.value)==Int(0)).Then(
+                Seq(
+                    self.size.store(Int(0)),
+                    self.bytes.store(Bytes("")),
+                    self.lengths.store(Bytes(""))
+                )
+            ).Else(
+                Seq(
+                    self.size.store(ExtractUint16(self.value, Int(0))),
+                    self.bytes.store(Substring(
+                        self.value, 
+                        (Int(2)*self.size.load())+Int(2), 
+                        Len(self.value)
+                    )),
+                    self.lengths.store(
+                        encode_string_lengths(self.bytes.load(), Bytes(""))
+                    )
+                )
             )
-        )
 
     def __getitem__(self, idx: Union[Int, int]) -> T:
         if isinstance(idx, int):
@@ -237,7 +255,7 @@ class DynamicArray(Generic[T]):
     def serialize(self) -> Bytes:
         return Concat(
             Uint16.encode(self.size.load()),
-            encode_string_lengths(self.bytes.load(), Bytes("")),
+            encode_string_positions(self.lengths.load(), Bytes(""), self.size.load()*Int(2)),
             self.bytes.load()
         )
 
