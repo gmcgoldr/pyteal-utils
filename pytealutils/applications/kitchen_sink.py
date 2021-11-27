@@ -41,7 +41,7 @@ class KitchenSink(ApproveAll):
             data: TealType.bytes, idx: TealType.uint64, lastIdx: TealType.uint64
         ) -> Expr:
             return If(
-                Len(data) == idx, # we're finished, append the last one
+                Len(data) == idx,  # we're finished, append the last one
                 l.append(Substring(data, lastIdx, idx)),
                 If(
                     GetByte(data, idx) == Int(32),

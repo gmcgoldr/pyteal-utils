@@ -40,7 +40,7 @@ try:
     print_results(cc.call(cc.concat, [["this", "string", "is", "joined"]]))
 
     ## Single call, increase budget with dummy calls
-    print_results(cc.call(cc.split, ["this string is split"], budget=3))
+    print_results(cc.call(cc.split, ["this string is split"], budget=2))
 
     # Compose from set of app calls
     comp = AtomicTransactionComposer()
