@@ -2,14 +2,27 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple, TypeVar, Generic, Union
 from pyteal import *
 
-class ABIType(ABC):
-    @abstractmethod
-    def decode() -> Expr:
-        pass
+class ABIType(Expr):
+
+    stack_type = TealType.anytype
 
     @abstractmethod
     def encode() -> Expr:
         pass
+
+
+    def type_of(self) -> TealType:
+        return self.stack_type
+
+    def has_return(self) -> bool:
+        return True 
+
+    def __str__(self) -> str:
+        return ""
+
+
+    def __teal__(self, options:CompileOptions):
+        return self.value.__teal__(options)
 
 
 @Subroutine(TealType.bytes)
@@ -17,20 +30,12 @@ def prepend_length(v: TealType.bytes) -> Expr:
     return Concat(Uint16.encode(Len(v)), v)
 
 @Subroutine(TealType.bytes)
-def remove_length(v: TealType.bytes) -> Expr:
-    return Extract(v, Int(2), Uint16.decode(v))
+def discard_length(v: TealType.bytes) -> Expr:
+    return Extract(v, Int(2), Uint16(v))
 
 @Subroutine(TealType.bytes)
 def tuple_get_bytes(b: TealType.bytes, idx: TealType.uint64)->Expr:
-    pos = ScratchVar()
-    return Seq(
-        pos.store(ExtractUint16(b, idx * Int(2))), # Get the position in the byte array
-        Extract(
-            b, 
-            pos.load() + Int(2),  # start after the uint16 length bytes
-            ExtractUint16(b, pos.load()) #until the end of the length
-        )
-    )
+    return Extract(b, idx+Int(2), ExtractUint16(b, idx))
 
 @Subroutine(TealType.bytes)
 def tuple_get_address(b: TealType.bytes, idx: TealType.uint64)->Expr:
@@ -52,7 +57,6 @@ def tuple_get_int(b: TealType.bytes, size: TealType.uint64, idx: TealType.uint64
 def tuple_add_bytes(data: TealType.bytes, length: TealType.uint64, b: TealType.bytes)->Expr:
     return Seq(
         Concat(
-
             #Update positions to add 2, accounting for newly added position
             binary_add_list(Extract(data, Int(0), Int(2)*length), length, Int(2)),
 
@@ -88,14 +92,31 @@ def binary_add(a: TealType.uint64, b: TealType.uint64) -> Expr:
         binary_add(a^b, (a&b) << Int(1))
     )
 
+@Subroutine(TealType.bytes)
+def encode_string_lengths(b: TealType.bytes, lengths: TealType.bytes)->Expr:
+    return If(Len(b) == Int(0)).Then(lengths).Else(
+        encode_string_lengths(
+            Substring(b, Uint16(b) + Int(2), Len(b)),
+            Concat(lengths, Extract(b, Int(0), Int(2)))
+        )
+    )
+
+@Subroutine(TealType.bytes)
+def sum_string_lengths(lengths: TealType.bytes, idx: TealType.uint64, sum: TealType.uint64)->Expr:
+    return If(idx == Int(0)).Then(sum).Else(
+        sum_string_lengths(
+            Substring(lengths, Int(2), Len(lengths)),  #Chop off uint16 we just read
+            idx - Int(1),  #Decrement index
+            sum + Uint16(lengths) + Int(2) #Add length + 2 for uint16 length
+        )
+    )
+
 
 class Uint64(ABIType):
     stack_type = TealType.uint64
 
-    @staticmethod
-    @Subroutine(TealType.uint64)
-    def decode(value: Bytes) -> Expr:
-        return Btoi(value)
+    def __init__(self, value: Bytes):
+        self.value = Btoi(value)
 
     @staticmethod
     @Subroutine(TealType.bytes)
@@ -105,24 +126,19 @@ class Uint64(ABIType):
 class Uint32(ABIType):
     stack_type = TealType.uint64
 
-    @staticmethod
-    @Subroutine(TealType.uint64)
-    def decode(value: Bytes) -> Expr:
-        return ExtractUint32(value, Int(0))
+    def __init__(self, value: Bytes):
+        self.value = ExtractUint32(value, Int(0))
 
     @staticmethod
     @Subroutine(TealType.bytes)
     def encode(value: Int) -> Expr:
         return Extract(Itob(value), Int(4), Int(4))
 
-
 class Uint16(ABIType):
     stack_type = TealType.uint64
 
-    @staticmethod
-    @Subroutine(TealType.uint64)
-    def decode(value: Bytes) -> Expr:
-        return ExtractUint16(value, Int(0))
+    def __init__(self, value: Bytes):
+        self.value = ExtractUint16(value, Int(0))
 
     @staticmethod
     @Subroutine(TealType.bytes)
@@ -132,10 +148,8 @@ class Uint16(ABIType):
 class String(ABIType):
     stack_type = TealType.bytes
 
-    @staticmethod
-    @Subroutine(TealType.bytes)
-    def decode(value: Bytes) -> Expr:
-        return remove_length(value)
+    def __init__(self, value: Bytes):
+        self.value = discard_length(value)
 
     @staticmethod
     @Subroutine(TealType.bytes)
@@ -145,10 +159,8 @@ class String(ABIType):
 class Address(ABIType):
     stack_type = TealType.bytes
 
-    @staticmethod
-    @Subroutine(TealType.bytes)
-    def decode(value: Bytes) -> Expr:
-        return value
+    def __init__(self, value: Bytes):
+        self.value = value
 
     @staticmethod
     @Subroutine(TealType.bytes)
@@ -174,40 +186,49 @@ class DynamicArray(Generic[T]):
 
     stack_type = TealType.bytes
 
-    len = ScratchVar(TealType.uint64)
-    data = ScratchVar(TealType.bytes) 
+    def __init__(self, data: Bytes):
+        self.size = ScratchVar(TealType.uint64)
+        self.bytes = ScratchVar(TealType.bytes) 
+        self.lengths = ScratchVar(TealType.bytes) 
 
-    def wrap(self, data: TealType.bytes)->Expr:
-        return Seq(
-            self.len.store(ExtractUint16(data, Int(0))),
-            self.data.store(Extract(data, Int(2), Len(data) - Int(2))),
-        )
+        self.value = data 
 
-    def create(self)->Expr:
+    def init(self)->Expr:
         return Seq(
-            self.len.store(Int(0)),
-            self.data.store(Bytes(""))
+            self.size.store(ExtractUint16(self.value, Int(0))),
+            self.bytes.store(Substring(
+                self.value, 
+                (Int(2)*self.size.load())+Int(2), 
+                Len(self.value)
+            )),
+            self.lengths.store(
+                encode_string_lengths(self.bytes.load(), Bytes(""))
+            )
         )
 
     def __getitem__(self, idx: Union[Int, int]) -> T:
         if isinstance(idx, int):
             idx = Int(idx) 
-        return self.get(idx)
 
-    def get(self, idx: Int) -> T:
         if self.__orig_class__.__args__[0] is String:
-            return tuple_get_bytes(self.data.load(), idx)
-        elif self.__orig_class__.__args__[0] is Address:
-            return tuple_get_address(self.data.load(), idx)
-        else:
-            return tuple_get_int(self.data.load(), Int(64), idx)
+            return tuple_get_bytes(self.bytes.load(), 
+                sum_string_lengths(self.lengths.load(), idx, Int(0)))
 
-    def push(self, b: TealType.bytes):
+        elif self.__orig_class__.__args__[0] is Address:
+            return tuple_get_address(self.bytes.load(), idx)
+
+        else:
+            return tuple_get_int(self.bytes.load(), Int(64), idx)
+
+
+    def append(self, b: TealType.bytes):
         if self.__orig_class__.__args__[0] is String:
             return Seq(
-                self.data.store(tuple_add_bytes(self.data.load(), self.len.load(), b)),
-                self.len.store(self.len.load() + Int(1))
+                self.bytes.store(Concat(self.bytes.load(), Uint16.encode(Len(b)), b)),
+                self.lengths.store(Concat(self.lengths.load(), Uint16.encode(Len(b)))),
+                self.size.store(self.size.load() + Int(1))
             )
+
         elif self.__orig_class__.__args__[0] is Address:
             return Assert(Int(0)) 
         else:
@@ -215,14 +236,14 @@ class DynamicArray(Generic[T]):
 
     def serialize(self) -> Bytes:
         return Concat(
-            Uint16.encode(self.len.load()),
-            self.data.load()
+            Uint16.encode(self.size.load()),
+            encode_string_lengths(self.bytes.load(), Bytes("")),
+            self.bytes.load()
         )
 
-    @staticmethod
-    @Subroutine(TealType.bytes)
-    def decode(value: Bytes) -> Expr:
-        return value
+
+    def __teal__(self, options: CompileOptions):
+        return self.value.__teal__(options)
 
     @staticmethod
     @Subroutine(TealType.bytes)
@@ -233,12 +254,6 @@ class Tuple(Generic[T]):
     stack_type = TealType.bytes
 
     def __init__(self, types:List[ABIType]):
-        pass
-
-    # uint16 position of first element, uint16 position of next ... then types 
-    @staticmethod
-    @Subroutine(TealType.bytes)
-    def decode(value: Bytes) -> Expr:
         pass
 
     @staticmethod

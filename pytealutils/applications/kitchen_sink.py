@@ -34,43 +34,47 @@ class KitchenSink(ApproveAll):
     @staticmethod
     @ABIMethod
     def split(a: abi.String) -> abi.DynamicArray[abi.String]:
-        l = abi.DynamicArray[abi.String]()
+        l = abi.DynamicArray[abi.String](Bytes(""))
 
-        @Subroutine(TealType.none)
-        def rsplit(
-            data: TealType.bytes, idx: TealType.uint64, lastIdx: TealType.uint64
-        ) -> Expr:
-            return If(
-                Len(data) == idx,
-                l.push(Substring(data, lastIdx, idx)),
-                If(
-                    GetByte(data, idx) == Int(32),
-                    Seq(
-                        l.push(Substring(data, lastIdx, idx)),
-                        rsplit(data, idx + Int(1), idx),
-                    ),
-                    rsplit(data, idx + Int(1), lastIdx),
-                ),
-            )
+        return Seq(
+            l.init(),
+            l.append(Bytes("hi")),
+            l.serialize()
+        )
 
-        return Seq(l.create(), rsplit(a, Int(0), Int(0)), l.serialize())
+
+    
+      #@Subroutine(TealType.none)
+      #def rsplit(
+      #    data: TealType.bytes, idx: TealType.uint64, lastIdx: TealType.uint64
+      #) -> Expr:
+      #    return If(
+      #        Len(data) == idx, # we're finished, append the last one
+      #        l.append(Substring(data, lastIdx, idx)),
+      #        If(
+      #            GetByte(data, idx) == Int(32),
+      #            Seq(
+      #                l.append(Substring(data, lastIdx, idx)),
+      #                rsplit(data, idx + Int(1), idx),
+      #            ),
+      #            rsplit(data, idx + Int(1), lastIdx),
+      #        ),
+      #    )
+
+      #return Seq(l.init(), rsplit(a, Int(0), Int(0)), l.serialize())
 
     @staticmethod
     @ABIMethod
     def concat(a: abi.DynamicArray[abi.String]) -> abi.String:
-        # TODO: this seems dumb from an api POV, we should be able to just operate on it directly
-        l = abi.DynamicArray[abi.String]()
-
         idx = ScratchVar()
         buff = ScratchVar()
         return Seq(
-            l.wrap(a),
             buff.store(Bytes("")),
             For(
                 idx.store(Int(0)),
-                idx.load() < l.len.load(),
+                idx.load() < a.size.load(),
                 idx.store(idx.load() + Int(1)),
-            ).Do(buff.store(Concat(buff.load(), Bytes(" "), l[idx.load()]))),
+            ).Do(buff.store(Concat(buff.load(), Bytes(" "), a[idx.load()]))),
             buff.load(),
         )
 

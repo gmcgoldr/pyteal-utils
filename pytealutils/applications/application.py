@@ -44,47 +44,35 @@ def ABIReturn(b: TealType.bytes) -> Expr:
 
 def ABIMethod(func):
     sig = signature(func)
-    returns = sig.return_annotation
 
     args = [tealabi.abiTypeName(v.annotation) for v in sig.parameters.values()]
+    returns = sig.return_annotation
+
     method = "{}({}){}".format(
         func.__name__, ",".join(args), tealabi.abiTypeName(returns)
     )
-    selector = hashy(method)
 
-    setattr(func, "abi_signature", method)
-    setattr(func, "abi_selector", selector)
+    setattr(func, "abi_selector", hashy(method))
     setattr(func, "abi_args", [abi.Argument(arg) for arg in args])
     setattr(func, "abi_returns", abi.Returns(tealabi.abiTypeName(returns)))
 
     # Get the types specified in the method
     abi_codec = [v.annotation for v in sig.parameters.values()]
 
-    # Replace signature with teal native types
-    new_params = OrderedDict(
-        [
-            (k, v.replace(annotation=v.annotation.stack_type))
-            for k, v in sig.parameters.items()
-        ]
-    )
-    func.__signature__ = sig.replace(parameters=new_params.values())
-
-    # Wrap with encode/decode
     @wraps(func)
     @Subroutine(TealType.uint64)
     def wrapper() -> Expr:
-        # Wrap func with encoder and decoders
+        decoded = [
+            abi_codec[idx](Txn.application_args[idx + 1])
+            for idx in range(len(abi_codec))
+        ]
+
         return Seq(
-            ABIReturn(
-                returns.encode(
-                    func(
-                        *[
-                            abi_codec[idx].decode(Txn.application_args[idx + 1])
-                            for idx in range(len(abi_codec))
-                        ]
-                    )
-                )
-            ),
+            # Initialize scratch space for complex types
+            *[d.init()  for d in decoded if hasattr(d, "init")],
+
+            ABIReturn(returns.encode(func(*decoded))),
+
             Int(1),
         )
 

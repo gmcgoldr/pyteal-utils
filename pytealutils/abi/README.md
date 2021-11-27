@@ -9,7 +9,7 @@ Each PyTEAL ABIType, it must implement encode/decode to convert to and from over
 - Address => TealType.bytes
 - String/Bytes[] => Remove uint16 encoded byte length => TealType.bytes
 - T[] => Remove uint16 encoded element length, Remove positions? => TealType.bytes 
-- T[N], Tuple(T...) => Remove the positions encodings => TealType.bytes
+- T[N]/Tuple(T...) => Remove the positions encodings? => TealType.bytes
 
 # Details
 
