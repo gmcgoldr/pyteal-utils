@@ -2,6 +2,16 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple, TypeVar, Generic, Union
 from pyteal import *
 
+class ABIType(ABC):
+    @abstractmethod
+    def decode() -> Expr:
+        pass
+
+    @abstractmethod
+    def encode() -> Expr:
+        pass
+
+
 @Subroutine(TealType.bytes)
 def prepend_length(v: TealType.bytes) -> Expr:
     return Concat(Uint16.encode(Len(v)), v)
@@ -40,33 +50,18 @@ def tuple_get_int(b: TealType.bytes, size: TealType.uint64, idx: TealType.uint64
 
 @Subroutine(TealType.bytes)
 def tuple_add_bytes(data: TealType.bytes, length: TealType.uint64, b: TealType.bytes)->Expr:
-    idx = ScratchVar(TealType.uint64)
-    init = idx.store(Int(0))
-    cond = idx.load()<length
-    iter = idx.store(idx.load() + Int(1))
-
-    buff = ScratchVar(TealType.bytes)
-
     return Seq(
-        buff.store(Bytes("")),
-        For(init, cond, iter).Do(
-            buff.store(
-                Concat(
-                    buff.load(),
-                    Uint16.encode(ExtractUint16(data, idx.load()*Int(2)) + Int(2))
-                )
-            )
-        ),
         Concat(
-            buff.load(),
 
-            #Set position of new data
+            binary_add_list(Extract(data, Int(0), Int(2)*length), length, Int(2)),
+
+            # Set position of new data
             Uint16.encode(Len(data)+Int(2)),
 
-            #Add existing bytes back
+            # Add existing bytes back
             Substring(data, length*Int(2), Len(data)),
 
-            # Add bytes prefixed with length
+            # Prefixed bytes with length
             Uint16.encode(Len(b)), b
         )
     )
@@ -79,27 +74,36 @@ def tuple_add_address(a: TealType.bytes, b: TealType.bytes):
 def tuple_add_int(a: TealType.bytes, b: TealType.bytes):
     pass
 
-def abiTypeName(t)->str:
-    if hasattr(t, "__name__"):
-        return t.__name__.lower()
-    elif t.__origin__ is DynamicArray:
-        return "{}[]".format(abiTypeName(t.__args__[0]))
-    elif t.__origin__ is FixedArray:
-        return "{}[{}]".format(abiTypeName(t.__args__[0]), t.__args__[1])
-    elif t.__origin__ is Tuple:
-        return "({})".format(",".join([abiTypeName(a) for a in t.__args__]))
+@Subroutine(TealType.bytes)
+def binary_add_list(data: TealType.bytes, len: TealType.uint64, val: TealType.uint64)->Expr:
+    return If(len>Int(0)).Then(Concat( 
+            binary_add_list(Extract(data, Int(0), len*Int(2)), len - Int(1), val),
+            Uint16.encode(binary_add(ExtractUint16(data, (len*Int(2))-Int(2)), val)),
+        )
+    ).Else(
+        Bytes("")
+    )
+    return Seq(
+        buff.store(Bytes("")),
+        For(init, cond, iter).Do(
+            buff.store(Concat(
+                buff.load(),
+            ))
+        ) ,
+        buff.load()
+    )
 
-    return ""
+@Subroutine(TealType.uint64)
+def binary_add(a: TealType.uint64, b: TealType.uint64) -> Expr:
+    return If(b==Int(0)).Then(a).Else(
+        binary_add(a^b, (a&b) << Int(1))
+    )
+#@Subroutine(TealType.bytes)
+#def binary_add(a: TealType.bytes, b: TealType.bytes) -> Expr:
+#    return If(Len(b)==Int(0)).Then(a).Else(
+#        binary_add(BytesXor(a, b), BytesAnd(a,b) << Int(1))
+#    )
 
-
-class ABIType(ABC):
-    @abstractmethod
-    def decode() -> Expr:
-        pass
-
-    @abstractmethod
-    def encode() -> Expr:
-        pass
 
 class Uint64(ABIType):
     stack_type = TealType.uint64
@@ -113,7 +117,6 @@ class Uint64(ABIType):
     @Subroutine(TealType.bytes)
     def encode(value: Int) -> Expr:
         return Itob(value)
-
 
 class Uint32(ABIType):
     stack_type = TealType.uint64
@@ -261,3 +264,15 @@ class Tuple(Generic[T]):
     @Subroutine(TealType.bytes)
     def encode(value: Bytes) -> Expr:
         pass
+
+def abiTypeName(t)->str:
+    if hasattr(t, "__name__"):
+        return t.__name__.lower()
+    elif t.__origin__ is DynamicArray:
+        return "{}[]".format(abiTypeName(t.__args__[0]))
+    elif t.__origin__ is FixedArray:
+        return "{}[{}]".format(abiTypeName(t.__args__[0]), t.__args__[1])
+    elif t.__origin__ is Tuple:
+        return "({})".format(",".join([abiTypeName(a) for a in t.__args__]))
+
+    return ""

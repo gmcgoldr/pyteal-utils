@@ -29,24 +29,22 @@ try:
     # Create client to make calls with
     cc = ContractClient(client, contract, signer)
 
-    # Single call, increase budget with "pad" method
     result = cc.call(cc.reverse, ["desrever yllufsseccus"])
     print("Result of single call: {}".format(result.abi_results[0].return_value))
 
-    # Single call, increase budget with "pad" method
     result = cc.call(cc.concat, [["this", "string", "is", "joined"]])
     print("Result of single call: {}".format(result.abi_results[0].return_value))
 
-    # Single call, increase budget with "pad" method
+    # Single call, increase budget with dummy calls
     result = cc.call(cc.split, ["this string is split"], budget=3)
     print("Result of single call: {}".format(result.abi_results[0].return_value))
 
     # Compose from set of app calls
     comp = AtomicTransactionComposer()
-    cc.compose(comp, cc.add, [1, 1])
-    cc.compose(comp, cc.sub, [3, 1])
-    cc.compose(comp, cc.div, [4, 2])
-    cc.compose(comp, cc.mul, [3, 2])
+    cc.compose(cc.add, [1, 1], comp)
+    cc.compose(cc.sub, [3, 1], comp)
+    cc.compose(cc.div, [4, 2], comp)
+    cc.compose(cc.mul, [3, 2], comp)
     result = comp.execute(cc.client, 2)
     print("Result of group: {}".format([r.return_value for r in result.abi_results]))
 

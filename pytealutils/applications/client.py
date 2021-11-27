@@ -1,4 +1,4 @@
-from typing import List
+from typing import Callable, List
 from algosdk.abi import Method, Contract
 from algosdk.v2client.algod import AlgodClient
 from algosdk.atomic_transaction_composer import (
@@ -7,6 +7,7 @@ from algosdk.atomic_transaction_composer import (
 )
 from algosdk.account import address_from_private_key
 from nacl.utils import random
+from os import urandom
 
 # TODO: Cache suggested params
 
@@ -26,7 +27,7 @@ class ContractClient:
         for m in self.contract.methods:
             setattr(self, m.name, m)
 
-    def compose(self, ctx: AtomicTransactionComposer, method: Method, args: List[any]):
+    def compose(self, method: Method, args: List[any], ctx: AtomicTransactionComposer):
         sp = self.client.suggested_params()
         ctx.add_method_call(
             self.app_id, method, self.addr, sp, self.signer, method_args=args
@@ -40,11 +41,9 @@ class ContractClient:
             self.app_id, method, self.addr, sp, self.signer, method_args=args
         )
 
-        import os
-
         for _ in range(budget - 1):
             ctx.add_method_call(
-                self.app_id, self.pad, self.addr, sp, self.signer, note=os.urandom(5)
+                self.app_id, self.pad, self.addr, sp, self.signer, note=urandom(5)
             )
 
         return ctx.execute(self.client, 2)

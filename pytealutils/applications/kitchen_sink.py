@@ -35,27 +35,27 @@ class KitchenSink(ApproveAll):
     @ABIMethod
     def split(a: abi.String) -> abi.DynamicArray[abi.String]:
         l = abi.DynamicArray[abi.String]()
-        idx = ScratchVar()
-        lastIdx = ScratchVar()
 
-        init = idx.store(Int(0))
-        cond = idx.load() < Len(a)
-        iter = idx.store(idx.load() + Int(1))
-
-        return Seq(
-            l.create(),
-            lastIdx.store(Int(0)),
-            For(init, cond, iter).Do(
-                If(GetByte(a, idx.load()) == Int(32)).Then(  # 32 is space in ascii
+        @Subroutine(TealType.none)
+        def rsplit(
+            data: TealType.bytes, idx: TealType.uint64, lastIdx: TealType.uint64
+        ) -> Expr:
+            return (
+                If(Len(data) == idx)
+                .Then(
+                    l.push(Substring(data, lastIdx, idx)),
+                )
+                .ElseIf(GetByte(data, idx) == Int(32))
+                .Then(
                     Seq(
-                        l.push(Substring(a, lastIdx.load(), idx.load())),
-                        lastIdx.store(idx.load()),
+                        l.push(Substring(data, lastIdx, idx)),
+                        rsplit(data, idx + Int(1), idx),
                     )
                 )
-            ),
-            l.push(Substring(a, lastIdx.load(), idx.load())),
-            l.serialize(),
-        )
+                .Else(rsplit(data, idx + Int(1), lastIdx))
+            )
+
+        return Seq(l.create(), rsplit(a, Int(0), Int(0)), l.serialize())
 
     @staticmethod
     @ABIMethod
