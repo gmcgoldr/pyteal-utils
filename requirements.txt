@@ -1,6 +1,7 @@
 cffi==1.15.0
 msgpack==1.0.2
 py-algorand-sdk==1.8.0
+git+git://github.com/algorand/py-algorand-sdk@algochoi/foreign-types#egg=package-two
 pycparser==2.21
 pycryptodomex==3.11.0
 PyNaCl==1.4.0
