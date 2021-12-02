@@ -1,18 +1,11 @@
 from pyteal import *
 from application import ABIMethod
-from defaults import ApproveAll
+from defaults import DefaultApprove
 import json
 
+from .. import abi
 
-from sys import path
-from os.path import dirname, abspath
-
-
-path.append(dirname(abspath(__file__)) + "/..")
-import abi
-
-
-class KitchenSink(ApproveAll):
+class KitchenSink(DefaultApprove):
     @staticmethod
     @ABIMethod
     def reverse(a: abi.String) -> abi.String:

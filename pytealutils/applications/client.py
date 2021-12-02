@@ -1,4 +1,4 @@
-from typing import Callable, List
+from typing import List
 from algosdk.abi import Method, Contract
 from algosdk.v2client.algod import AlgodClient
 from algosdk.atomic_transaction_composer import (

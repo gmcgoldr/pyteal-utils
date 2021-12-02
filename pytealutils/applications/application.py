@@ -3,9 +3,10 @@ from typing import List, OrderedDict
 from inspect import signature
 from functools import wraps
 from Cryptodome.Hash import SHA512
+import base64
+
 from algosdk import abi
 from algosdk.account import address_from_private_key
-from pyteal import *
 from algosdk.v2client import algod
 from algosdk.future.transaction import (
     ApplicationDeleteTxn,
@@ -20,13 +21,10 @@ from algosdk.atomic_transaction_composer import (
     AtomicTransactionComposer,
     TransactionWithSigner,
 )
-import base64
 
-from sys import path
-from os.path import dirname, abspath
+from pyteal import *
 
-path.append(dirname(abspath(__file__)) + "/..")
-import abi as tealabi
+from .. import abi as tealabi
 
 
 # Utility function to take the string version of a

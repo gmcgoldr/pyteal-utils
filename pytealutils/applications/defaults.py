@@ -2,7 +2,7 @@ from pyteal import Subroutine, Expr, TealType, Approve, Reject
 from application import Application
 
 
-class ApproveAll(Application):
+class DefaultApprove(Application):
     @staticmethod
     @Subroutine(TealType.uint64)
     def create() -> Expr:
@@ -34,7 +34,7 @@ class ApproveAll(Application):
         return Approve()
 
 
-class DenyAll(Application):
+class DefaultReject(Application):
     @staticmethod
     @Subroutine(TealType.uint64)
     def create() -> Expr:
