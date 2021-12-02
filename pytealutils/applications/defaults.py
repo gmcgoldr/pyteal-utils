@@ -1,5 +1,5 @@
 from pyteal import Subroutine, Expr, TealType, Approve, Reject
-from application import Application
+from .application import Application
 
 
 class DefaultApprove(Application):

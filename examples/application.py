@@ -6,7 +6,7 @@ from algosdk.atomic_transaction_composer import (
 from algosdk.v2client.algod import AlgodClient
 from algosdk.mnemonic import *
 
-from client import ContractClient
+from pytealutils.applications.client import ContractClient
 from kitchen_sink import KitchenSink
 
 
